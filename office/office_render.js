@@ -84,7 +84,7 @@
     if (kind === 'char') {
       e.style.setProperty('--d', '-' + (i * 0.37).toFixed(2) + 's');
       var bd = el('span', 'bd'); bd.style.display = 'none'; e.appendChild(bd);
-      var nm = el('span', 'nm'); nm.textContent = def.th; e.appendChild(nm);
+      var nm = el('span', 'nm'); nm.textContent = asset.id; e.appendChild(nm);          /* English name, small */
       if (asset.theme) { nm.style.background = asset.theme.bg; nm.style.color = asset.theme.fg; }   /* chip takes the spirit's own colour */
       if (!me.o.editor) e.addEventListener('click', function () { me.o.onTap && me.o.onTap(def, asset); });
     }
@@ -125,7 +125,7 @@
     (lock ? me.wrap : me.root).appendChild(me.pin);
     if (lock) {
       var rw = me.root.clientWidth || 390, rh = me.root.clientHeight || 844;
-      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', Math.min(rw / 390, rh / 844)); me.scroll.scrollTop = 0;   /* fit: the whole arranged scene stays visible */
+      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', Math.max(rw / 390, rh / 844)); me.scroll.scrollTop = 0;   /* cover: full screen, no borders (spirits sit well inside the visible band) */
     } else { me.wrap.style.height = me.L.room.h + 'px'; me.wrap.style.removeProperty('--s'); }
   };
   Office.prototype.u = function (path) { return (this.o.base || '') + path; };      /* where the images live when the page is not next to them */

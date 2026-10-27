@@ -12,7 +12,7 @@
 .of-char img{scale:var(--fx,1) 1;filter:drop-shadow(0 6px 5px #3a1c0a55);transform-origin:50% 100%;will-change:transform;animation:ofbreath var(--bs,4.2s) ease-in-out infinite;animation-delay:var(--d,0s)}
 .of-deco img{scale:var(--fx,1) 1}
 .of-char:active img{filter:drop-shadow(0 3px 3px #3a1c0a55) brightness(1.04)}
-.of-it .nm{border:1.5px solid #fffd;position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);white-space:nowrap;font:700 10px/1 inherit;font-family:inherit;color:var(--ink);background:var(--glass);border-radius:9px;padding:3px 7px;box-shadow:0 1px 3px #0003}
+.of-it .nm{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-weight:700;font-size:calc(var(--w,110px) * .078);line-height:1;font-family:inherit;letter-spacing:.2px;color:var(--ink);background:var(--glass);border:1px solid #ffffffd9;border-radius:99px;padding:.22em .7em;box-shadow:0 1px 3px #0003}
 .of-it .bd{position:absolute;right:4%;top:2%;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#e46a78;color:#fff;font:800 11px/16px inherit;font-family:inherit;border:2px solid #fff;box-shadow:0 2px 4px #0004}
 .of-it.hid{display:none}
 /* breathing: the feet stay pinned, the body stretches a hair vertically (--br = amount, set from layout.fx) */

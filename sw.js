@@ -1,5 +1,5 @@
 /* Notedy cloud PWA: cache the app shell so it opens instantly; the Google script API is never cached. */
-var CACHE = "notedy-cloud-v4";
+var CACHE = "notedy-cloud-v5";
 var SHELL = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "assets/Notedy.png", "assets/Drivee.png", "office/office.css", "office/office_render.js", "office/assets.json", "qr.js"];
 self.addEventListener("install", function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); })); self.skipWaiting(); });
 self.addEventListener("activate", function (e) {

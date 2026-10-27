@@ -294,8 +294,10 @@
       '<button class="ico" id="syncBtn" type="button" aria-label="ซิงก์ Drive ตอนนี้">🔄</button><button class="ico" id="menuBtn" type="button" aria-label="เมนู">⚙</button></div>' +
       '<div class="ofTabs"><button class="on" data-v="office" type="button"><b>🏡</b>ห้อง</button><button data-v="pending" type="button"><b>📥</b>ค้างตรวจ</button><button data-v="day" type="button"><b>📒</b>โน้ต</button></div>' +
       '<div id="ofScrim"></div><div id="ofSheet" role="dialog" aria-modal="true" data-dark="0"><div class="grab"></div><div class="phead"><img id="ofImg" alt=""><div><h2 id="ofNm"></h2><small id="ofRl"></small></div><button class="x" id="ofX" type="button" aria-label="ปิด">✕</button></div>' +
-      '<div class="strip" id="ofStrip"></div><div id="ofPane"><div class="ofQuick" id="ofQuick"></div><div id="ofChat"></div><form id="ofForm" autocomplete="off"><input id="ofIn" maxlength="500" enterkeyhint="send"><button id="ofSend" type="submit">ส่ง</button></form></div></div>' +
+      '<div class="strip" id="ofStrip"></div><div id="ofBody"></div>' +
+      '<div id="ofChatBox" class="collapsed"><button class="chatBar" id="ofChatBar" type="button"><span id="ofChatBarT">💬 แชท</span><span class="chev" aria-hidden="true">▾</span></button><div id="ofChat"></div><form id="ofForm" autocomplete="off"><input id="ofIn" maxlength="500" enterkeyhint="send"><button id="ofSend" type="submit">ส่ง</button></form></div></div>' +
       '<div id="ofMenu" hidden><div class="mCard"><h3>เมนู</h3><button type="button" id="mQr">📱 เปิดบนมือถือเครื่องอื่น (QR)</button><div id="mQrBox" hidden></div>' +
+      '<button type="button" id="mKey">🔑 ใส่ Gemini API key (ให้ภูติคุยได้)</button><div id="mKeyBox" hidden><div id="mKeySt" class="muted"></div><input id="mKeyIn" type="password" placeholder="วาง API key ที่นี่" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="krow"><button type="button" id="mKeySave">บันทึก</button><button type="button" id="mKeyDel" class="plain">ลบ key</button></div></div>' +
       '<button type="button" id="lockBtn">🔒 ล็อกแอป (ต้องใส่รหัสผ่านใหม่)</button><button type="button" id="cfgBtn">ล้างการตั้งค่าเครื่องนี้</button><button type="button" id="mClose" class="plain">ปิด</button></div></div><div id="ofAsk" hidden></div>';
     loadOfficeAssets().then(function () {
       if (view !== "office" || office) return;
@@ -361,28 +363,133 @@
     }).join("");
     var on = st.querySelector(".on"); if (on) st.scrollLeft = on.offsetLeft - st.clientWidth / 2 + on.offsetWidth / 2;
   }
+  /* ---------- per-spirit pages (what each spirit can show from the cloud data) ---------- */
+  var ofData = null, ofDataAt = 0, ofGroups = {}, ofDef = null, chatCollapsed = true;
+  try { chatCollapsed = localStorage.getItem("notedy.chat.collapsed") !== "0"; } catch (e) { /* default: collapsed so the page is not covered */ }
+  function bkkDay(iso) { return new Date(new Date(iso).getTime() + 7 * 3600e3).toISOString().slice(0, 10); }
+  function periodRange() {                                      // the monthly round runs from the 26th to the 26th
+    var t = todayStr().split("-").map(Number), y = t[0], m = t[1], d = t[2], sy, sm, ey, em;
+    if (d >= 26) { sy = y; sm = m; ey = m === 12 ? y + 1 : y; em = m === 12 ? 1 : m + 1; } else { ey = y; em = m; sy = m === 1 ? y - 1 : y; sm = m === 1 ? 12 : m - 1; }
+    return { from: sy + "-" + p2(sm) + "-26", to: ey + "-" + p2(em) + "-26" };
+  }
+  function loadSpiritData(force) {
+    if (!force && ofData && Date.now() - ofDataAt < 45000) return Promise.resolve(ofData);
+    return Promise.all([api("inbox"), api("daily", { date: todayStr() })]).then(function (r) {
+      ofData = { items: r[0].items || [], daily: r[1] }; ofDataAt = Date.now(); if (r[0].status) status = r[0].status; return ofData;
+    });
+  }
+  function newest(g) { var m = ""; g.files.forEach(function (f) { if (f.modifiedTime > m) m = f.modifiedTime; }); return m; }
+  function card(title, inner, cls) { return '<div class="card ' + (cls || "") + '"><h3>' + title + "</h3>" + inner + "</div>"; }
+  function goBtn(go, label) { return '<button type="button" class="pbtn" data-go="' + go + '">' + label + "</button>"; }
+  function itemRow(g, decide) {
+    ofGroups[g.gid] = g.files.map(function (f) { return { file_id: f.id, version: f.version }; });
+    var sub = g.files.length + " ไฟล์ · " + dayTime(newest(g)) + (g.path ? " · " + g.path : "");
+    return '<div class="item"><div class="nm"><b>' + (g.folder ? "📁 " : "") + esc(g.name) + "</b><small>" + esc(sub) + "</small></div>" +
+      (decide ? '<div class="dec"><button type="button" class="dbtn ok" data-md="work" data-g="' + esc(g.gid) + '">✓ งาน</button><button type="button" class="dbtn no" data-md="not-work" data-g="' + esc(g.gid) + '">✕ ไม่ใช่</button></div>'
+              : (g.link ? '<a class="lnk" href="' + esc(g.link) + '" target="_blank" rel="noopener">เปิด ↗</a>' : "")) + "</div>";
+  }
+  function searchHtml(q) {
+    var items = (ofData && ofData.items) || [], ql = String(q || "").trim().toLowerCase(), hit = items;
+    if (ql) hit = items.filter(function (f) { return (f.name || "").toLowerCase().indexOf(ql) >= 0 || (f.folder_name || "").toLowerCase().indexOf(ql) >= 0; });
+    hit = hit.slice().sort(function (a, b) { return a.modifiedTime < b.modifiedTime ? 1 : -1; });
+    var shown = hit.slice(0, 30);
+    return '<div class="muted">' + (ql ? "พบ " + hit.length + " ไฟล์" : "ไฟล์ล่าสุด") + (hit.length > 30 ? " (แสดง 30 รายการแรก)" : "") + "</div>" + (shown.length ? shown.map(function (f) {
+      return '<div class="item"><div class="nm"><b>' + esc(f.name) + "</b><small>" + esc((f.folder_name ? "📁 " + f.folder_name + " · " : "") + dayTime(f.modifiedTime)) + "</small></div>" + tagHtml(f.decision || "pending", true) + (f.link ? ' <a class="lnk" href="' + esc(f.link) + '" target="_blank" rel="noopener">เปิด</a>' : "") + "</div>";
+    }).join("") : '<div class="muted">ไม่พบไฟล์ที่ตรงกัน</div>');
+  }
+  function bodyFor(def, d) {
+    ofGroups = {};
+    var items = d.items, pend = items.filter(function (f) { return f.decision === "pending"; }), pg = groupFiles(pend).sort(function (a, b) { return newest(b) < newest(a) ? -1 : 1; }), today = groupFiles(d.daily.files || []);
+    var out = '<div class="bubble">' + esc(sayFor(def)) + "</div>";
+    if (def.id === "Notedy") {
+      var dec = today.filter(function (g) { return groupDecision(g) !== "pending"; }).length;
+      out += card("📒 สรุปวันนี้", '<div class="stat"><b>' + today.length + "</b> แฟ้มมีไฟล์เปลี่ยน · <b>" + (d.daily.files_total || 0) + '</b> ไฟล์</div><div class="bar"><i style="width:' + (today.length ? Math.round(dec * 100 / today.length) : 0) + '%"></i></div><div class="muted">ตัดสินแล้ว ' + dec + "/" + today.length + ' แฟ้ม</div><div class="row">' + goBtn("day", "📒 เปิดโน้ตรายวัน") + goBtn("pending", "📥 ค้างตรวจ (" + (status.pending || 0) + ")") + "</div>");
+      if (pg.length) out += card("ค้างตรวจล่าสุด", pg.slice(0, 4).map(function (g) { return itemRow(g, false); }).join("") + (pg.length > 4 ? '<div class="muted">…อีก ' + (pg.length - 4) + " แฟ้ม</div>" : ""));
+    } else if (def.id === "Minty") {
+      out += card("📥 แฟ้มค้างตรวจ (" + pg.length + " แฟ้ม · " + pend.length + " ไฟล์)", pg.length ? pg.slice(0, 8).map(function (g) { return itemRow(g, true); }).join("") + (pg.length > 8 ? '<div class="muted">…อีก ' + (pg.length - 8) + " แฟ้ม</div>" : "") + '<div class="row">' + goBtn("pending", "ดูทั้งหมด") + "</div>" : '<div class="muted">ไม่มีอะไรค้าง 🎉</div>');
+    } else if (def.id === "Drivey") {
+      out += card("☁️ สถานะ Drive", '<div class="kv">ซิงก์ล่าสุด <b>' + (status.last_success ? esc(dayTime(status.last_success)) : "ยังไม่เคย") + '</b></div><div class="kv">ไฟล์ที่ติดตาม <b>' + (status.total || items.length) + "</b> · รอตรวจ <b>" + (status.pending || 0) + "</b></div>" +
+        (status.error ? '<div class="warnTxt">ซิงก์ผิดพลาด: ' + esc(status.error) + "</div>" : '<div class="muted">ซิงก์อัตโนมัติทุก 30 นาที (อ่านเฉพาะชื่อ แฟ้ม วันที่ ไม่อ่านเนื้อไฟล์)</div>') + '<div class="row">' + goBtn("sync", "🔄 ซิงก์ตอนนี้") + "</div>");
+    } else if (def.id === "Clouddy") {
+      var issues = [], loose = items.filter(function (f) { return !f.folder_id && f.decision === "pending"; });
+      if (status.error) issues.push("ซิงก์ Drive ผิดพลาด: " + esc(status.error));
+      if (status.last_success && Date.now() - new Date(status.last_success).getTime() > 3 * 3600e3) issues.push("ซิงก์ล่าสุดเกิน 3 ชั่วโมงแล้ว");
+      if (loose.length) issues.push("ไฟล์ค้างตรวจที่ไม่อยู่ในแฟ้ม " + loose.length + " ไฟล์ (เช่น " + esc(trunc(loose[0].name, 28)) + ")");
+      pg.filter(function (g) { return g.files.length >= 40; }).slice(0, 3).forEach(function (g) { issues.push("แฟ้ม “" + esc(trunc(g.name, 28)) + "” ค้างอยู่ " + g.files.length + " ไฟล์ (เยอะผิดปกติ)"); });
+      out += card(issues.length ? "⚠️ พบ " + issues.length + " จุดที่ควรดู" : "✅ ตรวจแล้วไม่พบปัญหา", issues.length ? '<ul class="chk">' + issues.map(function (i) { return "<li>" + i + "</li>"; }).join("") + "</ul>" : '<div class="muted">ซิงก์ปกติ · ไม่มีไฟล์หลุดแฟ้ม · ไม่มีแฟ้มค้างผิดปกติ</div>', issues.length ? "warn" : "ok");
+    } else if (def.id === "Sunny") {
+      var pr = periodRange(), inP = items.filter(function (f) { var dd = f.modifiedTime ? bkkDay(f.modifiedTime) : ""; return dd >= pr.from && dd <= pr.to; });
+      var work = inP.filter(function (f) { return f.decision === "work"; }), gs = groupFiles(work).sort(function (a, b) { return b.files.length - a.files.length; }), still = inP.filter(function (f) { return f.decision === "pending"; }).length;
+      out += card("☀️ สรุปรอบ " + esc(shortDate(pr.from)) + " – " + esc(shortDate(pr.to)), '<div class="stat"><b>' + gs.length + "</b> แฟ้มงาน · <b>" + work.length + "</b> ไฟล์ที่ยืนยันเป็นงาน</div>" +
+        (gs.length ? '<table class="sum"><tr><th>แฟ้ม</th><th>ไฟล์</th></tr>' + gs.slice(0, 12).map(function (g) { return "<tr><td>" + esc(trunc(g.name, 34)) + "</td><td>" + g.files.length + "</td></tr>"; }).join("") + "</table>" + (gs.length > 12 ? '<div class="muted">…อีก ' + (gs.length - 12) + " แฟ้ม</div>" : "") : '<div class="muted">ยังไม่มีไฟล์ที่ตัดสินเป็นงานในรอบนี้</div>') +
+        (still ? '<div class="muted">ยังรอตรวจในรอบนี้อีก ' + still + " ไฟล์</div>" : "") + '<div class="row">' + goBtn("pending", "📥 ไปตรวจต่อ") + "</div>");
+    } else if (def.id === "Searchy") {
+      out += card("🔎 ค้นหาไฟล์ย้อนหลัง", '<input id="ofSearch" class="sinp" placeholder="พิมพ์ชื่อไฟล์หรือชื่อแฟ้ม…" autocomplete="off" autocapitalize="off"><div id="ofSearchRes">' + searchHtml("") + "</div>");
+    } else if (def.id === "Linky") {
+      var fl = groupFiles(items.filter(function (f) { return f.folder_id; })).sort(function (a, b) { return newest(b) < newest(a) ? -1 : 1; }).slice(0, 12);
+      out += card("🔗 แฟ้มที่แก้ล่าสุด", fl.length ? fl.map(function (g) { return '<div class="item"><div class="nm"><b>📁 ' + esc(g.name) + "</b><small>" + esc((g.path ? g.path + " · " : "") + dayTime(newest(g))) + "</small></div>" + (g.link ? '<a class="lnk" href="' + esc(g.link) + '" target="_blank" rel="noopener">เปิดแฟ้ม ↗</a>' : "") + "</div>"; }).join("") : '<div class="muted">ยังไม่มีแฟ้ม</div>');
+    } else if (def.id === "Buddy") {
+      out += card("🐱 ทิปการใช้แอป", '<ul class="chk"><li>แตะภูติแต่ละตัวเพื่อดูงานของตัวนั้น</li><li>มินตี้ตัดสินแฟ้มค้างตรวจได้เลย (✓ งาน / ✕ ไม่ใช่)</li><li>โน๊ตดี้สรุปวันนี้ เสิร์ชชี่ค้นไฟล์ ซันนี่สรุปรอบ 26→26</li><li>พิมพ์คุยกับภูติได้ที่แถบแชทด้านล่าง (ต้องใส่ Gemini key ที่ ⚙ ก่อน)</li><li>ซิงก์ Drive อัตโนมัติทุก 30 นาที หรือกด 🔄</li></ul>');
+    } else {
+      var why = { Newnew: "จัดไฟล์ PDF/XLSX และจุดตัดหน้า", Backy: "สำรองข้อมูลและถังขยะ", Drawy: "ปรับหน้าตา PDF", Planly: "วางแผนและกำหนดส่ง" }[def.id] || def.role;
+      out += card("💻 ส่วนนี้ทำบนแอปคอม", '<div class="muted">' + esc(why) + " ยังต้องใช้แอปบนคอม" + (def.id === "Backy" ? " · ข้อมูลฝั่งมือถือเก็บอยู่ใน Google Sheet ของคุณเองอยู่แล้ว" : "") + " แต่ชวนคุยได้ตามปกติค่ะ</div>");
+    }
+    return out;
+  }
+  function renderBody(def, d) { var b = $("ofBody"); if (b) { var st = b.scrollTop; b.innerHTML = bodyFor(def, d); b.scrollTop = st; } }
+  function setChatCollapsed(c, keep) {
+    chatCollapsed = !!c; if (!keep) { try { localStorage.setItem("notedy.chat.collapsed", c ? "1" : "0"); } catch (e) {} }
+    var box = $("ofChatBox"); if (!box) return; box.classList.toggle("collapsed", chatCollapsed);
+    var t = $("ofChatBarT"); if (t && ofDef) t.textContent = "💬 แชทกับ" + ofDef.th + (chatBusy ? " · กำลังคิด…" : "");
+    if (!chatCollapsed) { var ch = $("ofChat"); if (ch) ch.scrollTop = ch.scrollHeight; }
+  }
+  function openKeyBox() {
+    $("ofMenu").hidden = false; $("mQrBox").hidden = true; $("mKeyBox").hidden = false; $("mKeySt").textContent = "กำลังตรวจ…";
+    api("ai_status").then(function (r) { $("mKeySt").textContent = r.has_key ? "✅ ตั้ง key ไว้แล้ว (วางใหม่เพื่อเปลี่ยน)" : "❌ ยังไม่ได้ตั้ง key — วางตรงนี้แล้วกดบันทึก"; })
+      .catch(function (e) { if (!authFail(e)) $("mKeySt").textContent = /unknown action/.test(e.message) ? "สคริปต์ยังไม่อัปเดต (ต้องอัปเวอร์ชันใหม่ก่อน)" : e.message; });
+  }
+  function saveKey(del) {
+    var inp = $("mKeyIn"), key = del ? "" : (inp.value || "").trim();
+    if (!del && !key) { toast("วาง key ก่อน"); return; }
+    if (del && !confirm("ลบ key ออกจากสคริปต์? ภูติจะคุยไม่ได้จนกว่าจะใส่ใหม่")) return;
+    var b = $("mKeySave"); b.disabled = true; $("mKeySt").textContent = "กำลังตรวจกับ Google…";
+    api("ai_setkey", { key: key }, 30000).then(function (r) { inp.value = ""; $("mKeySt").textContent = r.has_key ? "✅ บันทึกแล้ว ใช้ได้เลย" : "ลบ key แล้ว"; toast(r.has_key ? "บันทึก key แล้ว ลองคุยกับภูติได้เลย" : "ลบ key แล้ว"); })
+      .catch(function (e) { if (!authFail(e)) $("mKeySt").textContent = "⚠️ " + e.message; }).then(function () { b.disabled = false; });
+  }
+  function bubbleKey() {
+    var w = document.createElement("div"); w.className = "acts"; w.innerHTML = '<button type="button" data-key="1">🔑 ใส่ Gemini key ตอนนี้</button>'; $("ofChat").appendChild(w);
+  }
   function openSheet(def, asset) {
-    askStop(); ofSpirit = def.id; applyTheme(def.id);
+    askStop(); ofSpirit = def.id; ofDef = def; applyTheme(def.id);
     $("ofImg").src = office.u(office.night ? asset.night : asset.day); $("ofNm").textContent = def.th + " (" + def.id + ")"; $("ofRl").textContent = def.role + " · คุยกับ AI ได้ (Gemini ฟรี)";
-    buildStrip(def.id); $("ofChat").innerHTML = ""; spRow(def.id, sayFor(def));
-    $("ofQuick").innerHTML = (QUICK[def.id] || []).map(function (q) { return '<button type="button" data-q="' + q[0] + '">' + q[1] + "</button>"; }).join("");
-    $("ofIn").placeholder = "พิมพ์คุยกับ" + def.th + "…"; $("office").classList.add("open");
+    buildStrip(def.id); $("ofBody").innerHTML = '<div class="bubble">' + esc(sayFor(def)) + '</div><div class="muted" style="text-align:center">กำลังโหลดข้อมูล…</div>'; $("ofBody").scrollTop = 0;
+    $("ofChat").innerHTML = ""; $("ofIn").placeholder = "พิมพ์คุยกับ" + def.th + "…"; setChatCollapsed(chatCollapsed, true); $("office").classList.add("open");
     var me = def.id;
+    loadSpiritData(false).then(function (d) { if (ofSpirit === me) renderBody(def, d); })
+      .catch(function (e) { if (ofSpirit === me && !authFail(e) && $("ofBody")) $("ofBody").innerHTML = '<div class="bubble">' + esc(sayFor(def)) + '</div><div class="banner">' + esc(e.message) + "</div>"; });
     api("chat_log", { spirit: def.id }).then(function (r) { if (ofSpirit === me && $("ofChat") && r.entries && r.entries.length) renderEntries(r.entries, me); })
       .catch(function (e) { if (ofSpirit === me && !authFail(e) && $("ofChat")) bubble("note", /unknown action/.test(e.message) ? "ระบบแชทยังไม่เปิดใช้ (อัปเดตสคริปต์ก่อน)" : e.message); });
+  }
+  function ofDecide(btn) {
+    var items = ofGroups[btn.dataset.g]; if (!items) return; var row = btn.closest(".item"), bs = [].slice.call(row.querySelectorAll("button"));
+    bs.forEach(function (b) { b.disabled = true; });
+    decide(items, btn.dataset.md).then(function () {
+      toast(btn.dataset.md === "work" ? "ตั้งเป็นงานแล้ว" : "ตั้งเป็นไม่ใช่งานแล้ว"); officeData();
+      return loadSpiritData(true).then(function (d) { if (ofDef) renderBody(ofDef, d); });
+    }).catch(function (e) { toast(e.message); bs.forEach(function (b) { b.disabled = false; }); });
   }
   function closeSheet() { var o = $("office"); if (o) o.classList.remove("open"); ofSpirit = null; try { document.activeElement.blur(); } catch (e) {} }
   function sendChat() {
     var inp = $("ofIn"), msg = (inp.value || "").trim(); if (!msg || chatBusy || !ofSpirit) return;
-    chatBusy = true; inp.value = ""; $("ofSend").disabled = true; var me = ofSpirit; bubble("me", msg); var wait = spRow(me, "", true); $("ofChat").scrollTop = 1e6;
+    chatBusy = true; inp.value = ""; $("ofSend").disabled = true; var me = ofSpirit; setChatCollapsed(false, true); bubble("me", msg); var wait = spRow(me, "", true); $("ofChat").scrollTop = 1e6;
     api("chat", { spirit: me, message: msg }, 110000).then(function (r) {
       if (ofSpirit !== me) return; wait.remove();
       spRow(me, r.reply); bubbleActs(r.id || "x" + Date.now(), r.actions, []);
       if (r.asked && r.asked.length) askFromLog(me, r.asked);
     }).catch(function (e) {
       if (authFail(e)) return; if (ofSpirit !== me) return; wait.remove();
-      bubble("err", /GEMINI_KEY|ยังไม่ได้ใส่/.test(e.message) ? "ยังไม่ได้ใส่ Gemini API key ในสคริปต์ (ดูวิธีใน README)" : e.message);
-    }).then(function () { chatBusy = false; var b = $("ofSend"); if (b) b.disabled = false; var c = $("ofChat"); if (c) c.scrollTop = c.scrollHeight; });
+      var nokey = /GEMINI_KEY|ยังไม่ได้ใส่/.test(e.message); bubble("err", nokey ? "ยังไม่ได้ใส่ Gemini API key" : e.message); if (nokey) bubbleKey();
+    }).then(function () { chatBusy = false; var b = $("ofSend"); if (b) b.disabled = false; var c = $("ofChat"); if (c) c.scrollTop = c.scrollHeight; setChatCollapsed(chatCollapsed, true); });
   }
   /* "A runs to ask B": a small animated card played after the answer arrives */
   var askQ = [], askT = 0;
@@ -434,7 +541,7 @@
     api("sync").then(function (r) { toast(r.ok === false ? "ซิงก์ไม่สำเร็จ: " + r.error : r.busy ? "กำลังซิงก์อยู่แล้ว" : "ซิงก์แล้ว"); if (b) b.disabled = false; if (view === "office") officeData(); else load(); }).catch(function (e2) { toast(e2.message); if (b) b.disabled = false; });
   }
   if (window.visualViewport) {                                   // keep the chat sheet above the iPhone keyboard
-    var vv = window.visualViewport, kb = function () { var sh = $("ofSheet"); if (!sh) return; sh.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; sh.style.maxHeight = Math.max(280, Math.min(window.innerHeight * 0.86, vv.height - 10)) + "px"; };
+    var vv = window.visualViewport, kb = function () { var sh = $("ofSheet"); if (!sh) return; sh.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; sh.style.maxHeight = Math.max(280, Math.min(window.innerHeight * 0.9, vv.height - 10)) + "px"; };
     vv.addEventListener("resize", kb); vv.addEventListener("scroll", kb);
   }
   setInterval(function () { if (office && view === "office") office.setNight(isNight()); }, 60000);
@@ -448,7 +555,13 @@
     if (t.closest("#ofScrim") || t.closest("#ofX")) { closeSheet(); return; }
     if (t.closest("#ofPend")) { view = "pending"; renderShell(); load(); return; }
     var sp = t.closest("#ofStrip [data-sp]"); if (sp) { var cc = ofAssets.chars.filter(function (c) { return c.id === sp.dataset.sp; })[0]; if (cc && Office.BY[cc.id]) openSheet(Office.BY[cc.id], cc); return; }
-    if (t.closest("#menuBtn")) { $("ofMenu").hidden = false; $("mQrBox").hidden = true; return; }
+    if (t.closest("#menuBtn")) { $("ofMenu").hidden = false; $("mQrBox").hidden = true; $("mKeyBox").hidden = true; return; }
+    var go = t.closest("#ofBody [data-go]"); if (go) { var gv = go.dataset.go; closeSheet(); if (gv === "sync") syncNow(); else { view = gv; renderShell(); load(); } return; }
+    var md = t.closest("#ofBody [data-md]"); if (md) { ofDecide(md); return; }
+    if (t.closest("#ofChatBar")) { setChatCollapsed(!chatCollapsed); return; }
+    if (t.closest("#mKey") || t.closest("[data-key]")) { openKeyBox(); return; }
+    if (t.closest("#mKeySave")) { saveKey(false); return; }
+    if (t.closest("#mKeyDel")) { saveKey(true); return; }
     if (t.closest("#mClose") || t.id === "ofMenu") { $("ofMenu").hidden = true; return; }
     if (t.closest("#mQr")) { showQr(); return; }
     if (t.closest("#askClose") || t.id === "ofAsk") { askStop(); return; }
@@ -475,6 +588,7 @@
     if (t.value.length < 6) return;
     if ($("app").dataset.pin === "create") { if (t.id === "pinA") $("pinB").focus(); else submitPin(); } else submitPin();
   });
+  document.addEventListener("input", function (e) { if (e.target && e.target.id === "ofSearch") { var r = $("ofSearchRes"); if (r) r.innerHTML = searchHtml(e.target.value); } });
   document.addEventListener("submit", function (e) { if (e.target && e.target.id === "ofForm") { e.preventDefault(); sendChat(); } });
   document.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target && (e.target.id === "pinA" || e.target.id === "pinB")) submitPin(); });
   document.addEventListener("visibilitychange", function () { if (document.hidden || !cfg || !cfg.p) return; if (view === "office") { if (office) office.setNight(isNight()); officeData(); } else if (!busy) load(true); });

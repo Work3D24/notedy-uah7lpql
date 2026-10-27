@@ -111,7 +111,7 @@ body.inOffice{overflow:hidden;position:fixed;inset:0;width:100%;background:#2a1a
 #ofScrim{position:absolute;z-index:40;inset:0;background:#2a140066;opacity:0;pointer-events:none;transition:opacity .25s}
 #office.open #ofScrim{opacity:1;pointer-events:auto}
 /* chat sheet: per-spirit theme (variables --t1 accent, --t2/--t3 soft backgrounds, --td dark text, --tpat pattern) like the PC app */
-#ofSheet{--t1:#4b64c4;--t2:#eef1ff;--t3:#fff4e6;--td:#2c3a86;--tpat:none;position:absolute;z-index:41;left:0;right:0;bottom:0;height:84dvh;max-height:86dvh;display:flex;flex-direction:column;background:#fff;border-radius:24px 24px 0 0;
+#ofSheet{--t1:#4b64c4;--t2:#eef1ff;--t3:#fff4e6;--td:#2c3a86;--tpat:none;position:absolute;z-index:41;left:0;right:0;bottom:0;height:90dvh;max-height:92dvh;display:flex;flex-direction:column;background:#fff;border-radius:24px 24px 0 0;
   transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.9,.3,1);box-shadow:0 -8px 30px #0006;color:#3a3560;overflow:hidden}
 #office.open #ofSheet{transform:none}
 #ofSheet .grab{width:42px;height:5px;border-radius:3px;background:#0003;margin:8px auto 0;flex:none}
@@ -126,8 +126,36 @@ body.inOffice{overflow:hidden;position:fixed;inset:0;width:100%;background:#2a1a
 #ofSheet .strip button{border:2px solid transparent;background:transparent;border-radius:12px;padding:3px;flex:none;text-align:center;font-size:10px;color:var(--td);width:56px}
 #ofSheet .strip button img{width:40px;height:40px;object-fit:contain;display:block;margin:0 auto}
 #ofSheet .strip button.on{border-color:var(--t1);background:var(--t3)}
-#ofPane{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px);background-color:var(--t2);background-image:var(--tpat);background-size:56px 56px;border-top:3px solid var(--t1)}
-#ofChat{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:2px 2px 4px;-webkit-overflow-scrolling:touch}
+#ofBody{flex:1;min-height:0;overflow-y:auto;padding:12px 14px 16px;display:flex;flex-direction:column;gap:11px;background:linear-gradient(180deg,var(--t2) 0,#fff 240px);-webkit-overflow-scrolling:touch}
+#ofBody .bubble{background:color-mix(in srgb,var(--t1) 11%,#fff);border-radius:6px 18px 18px 18px;padding:12px 15px;line-height:1.65;font-size:14.5px;color:var(--td)}
+#ofBody .card{border:1px solid #e6e1f2;border-radius:14px;padding:12px 14px;background:#fff;color:#3a3560}
+#ofBody .card.ok{background:#eefaf3;border-color:#bfe6d3}#ofBody .card.warn{background:#fff6e8;border-color:#f3d6ae}
+#ofBody .card h3{margin:0 0 8px;font-size:14.5px;color:var(--td)}
+#ofBody .stat{font-size:14px;margin-bottom:6px}#ofBody .stat b{font-size:20px;color:var(--t1)}
+#ofBody .kv{font-size:13.5px;margin:3px 0}
+#ofBody .muted{color:#7d7aa0;font-size:12.5px;margin:4px 0}
+#ofBody .warnTxt{color:#9a3a22;font-size:13px;margin:6px 0}
+#ofBody .bar{height:9px;border-radius:99px;background:#ece8f5;overflow:hidden;margin:6px 0}#ofBody .bar i{display:block;height:100%;background:var(--t1)}
+#ofBody .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#ofBody .pbtn{border:0;background:var(--t1);color:#fff;border-radius:12px;padding:10px 13px;font-weight:700;font-size:13.5px;box-shadow:0 4px 13px color-mix(in srgb,var(--t1) 35%,transparent)}
+#ofBody .item{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid #eeeaf6;font-size:13.5px}
+#ofBody .item:first-of-type{border-top:0}
+#ofBody .item .nm{min-width:0;flex:1}#ofBody .item .nm b{display:block;font-weight:700;word-break:break-word}#ofBody .item .nm small{color:#7d7aa0;display:block;word-break:break-word}
+#ofBody .dec{display:flex;gap:5px;flex:none}
+#ofBody .dbtn{border:0;border-radius:10px;padding:8px 10px;font-weight:800;font-size:12.5px}
+#ofBody .dbtn.ok{background:#d4f0e1;color:#1f6b45}#ofBody .dbtn.no{background:#ffe0e5;color:#a3304d}#ofBody .dbtn:disabled{opacity:.45}
+#ofBody a.lnk{color:var(--t1);font-weight:700;text-decoration:none;font-size:13px;white-space:nowrap}
+#ofBody .chk{margin:0;padding-left:18px;font-size:13.5px;line-height:1.7}
+#ofBody table.sum{width:100%;border-collapse:collapse;font-size:13.5px}#ofBody table.sum td,#ofBody table.sum th{padding:6px 4px;border-bottom:1px solid #eeeaf6;text-align:left}#ofBody table.sum td:nth-child(2),#ofBody table.sum th:nth-child(2){text-align:right;font-variant-numeric:tabular-nums}
+#ofBody .sinp{width:100%;border:2px solid color-mix(in srgb,var(--t1) 40%,#fff);border-radius:12px;padding:9px 12px;font-size:16px;margin-bottom:6px;color:#303c73}
+#ofBody .ntag{font-size:11px;font-weight:700;border-radius:99px;padding:1px 8px;background:#e8e4f6;color:#5b4aa6;white-space:nowrap}
+#ofBody .ntag.y{background:#cdeedd;color:#1f6b45}#ofBody .ntag.n{background:#ffd9e0;color:#a3304d}#ofBody .ntag.p{background:#fde7c7;color:#8a5a12}
+#ofBody .banner{margin:0}
+#ofChatBox{flex:none;display:flex;flex-direction:column;gap:6px;padding:6px 12px calc(env(safe-area-inset-bottom,0px) + 8px);background-color:var(--t2);background-image:var(--tpat);background-size:56px 56px;border-top:3px solid var(--t1)}
+.chatBar{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:color-mix(in srgb,var(--t1) 16%,#fff);color:var(--td);font-weight:700;font-size:13.5px;border-radius:10px;padding:8px 12px}
+.chatBar .chev{font-size:16px;transition:transform .15s}#ofChatBox.collapsed .chatBar .chev{transform:rotate(180deg)}
+#ofChatBox.collapsed #ofChat,#ofChatBox.collapsed #ofForm{display:none}
+#ofChat{max-height:30dvh;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:2px 2px 4px;-webkit-overflow-scrolling:touch}
 #ofChat .m{padding:9px 13px;border-radius:16px;font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-width:100%}
 #ofChat .m.me{align-self:flex-end;max-width:84%;background:var(--t1);color:#fff;border-bottom-right-radius:5px}
 #ofChat .m.sp{background:#fff;color:#3a3560;border:2px solid color-mix(in srgb,var(--t1) 45%,#fff);border-top-left-radius:5px}
@@ -152,7 +180,7 @@ body.inOffice{overflow:hidden;position:fixed;inset:0;width:100%;background:#2a1a
 #ofForm button:disabled{opacity:.5}
 #ofSheet[data-dark="1"] .phead{background:#2b2943}#ofSheet[data-dark="1"] .phead h2{color:#f0eeff}#ofSheet[data-dark="1"] .phead small{color:#b6b1e0}
 #ofSheet[data-dark="1"] .strip{background:#34315a}#ofSheet[data-dark="1"] .strip button{color:#cfcaf3}#ofSheet[data-dark="1"] .strip button.on{background:#403c70}
-#ofSheet[data-dark="1"] #ofPane{background-color:#2b2943}
+#ofSheet[data-dark="1"] #ofBody{background:linear-gradient(180deg,#2b2943 0,#3a3760 240px)}#ofSheet[data-dark="1"] #ofBody .bubble{background:#3d3a63;color:#f0eeff}#ofSheet[data-dark="1"] #ofBody .card{background:#34315a;color:#e6e3ff;border-color:#5a5690}#ofSheet[data-dark="1"] #ofBody .card h3,#ofSheet[data-dark="1"] #ofBody .stat b{color:#cfcaf3}#ofSheet[data-dark="1"] #ofBody .muted,#ofSheet[data-dark="1"] #ofBody .item .nm small{color:#b6b1e0}#ofSheet[data-dark="1"] #ofBody .item{border-color:#4a4680}#ofSheet[data-dark="1"] #ofBody .pbtn{color:#1d1b33}#ofSheet[data-dark="1"] #ofBody a.lnk{color:#cfcaf3}#ofSheet[data-dark="1"] #ofChatBox{background-color:#2b2943}#ofSheet[data-dark="1"] .chatBar{background:#3d3a63;color:#f0eeff}
 #ofSheet[data-dark="1"] #ofChat .m.sp{background:#3d3a63;color:#f0eeff;border-color:#5a5690}#ofSheet[data-dark="1"] #ofChat .m.me{background:#8d86d9;color:#1d1b33}
 #ofSheet[data-dark="1"] #ofChat .m.note,#ofSheet[data-dark="1"] .who{color:#b6b1e0}#ofSheet[data-dark="1"] #ofForm input{background:#3d3a63;color:#fff;border-color:#5a5690}
 #ofSheet[data-dark="1"] #ofChat .acts button,#ofSheet[data-dark="1"] .ofQuick button,#ofSheet[data-dark="1"] #ofForm button{color:#1d1b33}
@@ -195,3 +223,8 @@ body.inOffice{overflow:hidden;position:fixed;inset:0;width:100%;background:#2a1a
 .setup textarea{width:100%;border:2px solid #ecd9b0;border-radius:14px;padding:10px 12px;font:inherit;font-size:14px;background:#fffdf5;color:#6d4a2c;margin-bottom:8px;resize:vertical}
 .setup details.adv{margin:12px 0 4px;font-size:13px;color:#8a5a33}
 .setup details.adv input{display:block;width:100%;margin:4px 0 8px}
+#mKeyBox{background:#fff;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+#mKeyBox input{width:100%;border:2px solid #ecd9b0;border-radius:12px;padding:10px 12px;font-size:16px;color:#5b3a24}
+#mKeyBox .krow{display:flex;gap:8px}#mKeyBox .krow button{flex:1;text-align:center;padding:10px}
+#mKeyBox .muted{font-size:12.5px;color:#8a6a4f}
+#ofChat .acts button[data-key]{background:#e46a78;box-shadow:none}
