@@ -16,7 +16,14 @@
 
   /* ---------- config ---------- */
   function loadCfg() { try { var c = JSON.parse(localStorage.getItem(CFG_KEY) || "null"); return c && URL_OK.test(c.u) && TOKEN_OK.test(c.t) ? { u: c.u, t: c.t, p: PIN_OK.test(c.p || "") ? c.p : "" } : null; } catch (e) { return null; } }
-  function saveCfg(c) { try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); return true; } catch (e) { return false; } }
+  function idbSet(k, v) {                                       // the service worker cannot read localStorage: keep a copy of the config in IndexedDB
+    try {
+      var rq = indexedDB.open("notedy", 1); rq.onupgradeneeded = function () { rq.result.createObjectStore("kv"); };
+      rq.onsuccess = function () { try { var st = rq.result.transaction("kv", "readwrite").objectStore("kv"); if (v == null) st["delete"](k); else st.put(v, k); } catch (e) { /* no push peek, generic text */ } };
+    } catch (e) { /* ignore */ }
+  }
+  function clearCfgStore() { try { localStorage.removeItem(CFG_KEY); } catch (e) { /* ignore */ } idbSet("cfg", null); }
+  function saveCfg(c) { try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); idbSet("cfg", c); return true; } catch (e) { return false; } }
   function setupFromHash() {                                   // #setup=<base64url({u,t})> from the owner's "setup" sheet
     var m = /[#&]setup=([A-Za-z0-9_\-=]+)/.exec(location.hash); if (!m) return null;
     try {
@@ -216,7 +223,7 @@
   }
   function gatePin(msg) {                                       // is a PIN already set on the Google side? then ask for it, otherwise create it
     return api("ping").then(function (r) { renderPin(!r.pin_set, msg); })
-      .catch(function (e) { if (e.code === "unauthorized") { cfg = null; try { localStorage.removeItem(CFG_KEY); } catch (e2) {} renderSetup(e.message); } else renderPin(false, e.message); });
+      .catch(function (e) { if (e.code === "unauthorized") { cfg = null; clearCfgStore(); renderSetup(e.message); } else renderPin(false, e.message); });
   }
   function submitPin() {
     var create = $("app").dataset.pin === "create", a = ($("pinA").value || "").trim(), b = create ? ($("pinB").value || "").trim() : a;
@@ -278,7 +285,7 @@
   function isNight() { var h = parseInt(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date()), 10); return h >= 18 || h < 6; }
   function authFail(e) {                                         // PIN changed / reset elsewhere or token revoked
     if (e.code && PIN_CODES[e.code]) { cfg.p = ""; saveCfg(cfg); gatePin(e.code === "pin_setup" ? "" : e.message); return true; }
-    if (e.code === "unauthorized") { cfg = null; try { localStorage.removeItem(CFG_KEY); } catch (e2) {} renderSetup(e.message); return true; }
+    if (e.code === "unauthorized") { cfg = null; clearCfgStore(); renderSetup(e.message); return true; }
     return false;
   }
   function loadOfficeAssets() {
@@ -303,7 +310,7 @@
       '<div id="ofChatBox" class="collapsed"><button class="chatBar" id="ofChatBar" type="button"><span id="ofChatBarT">💬 แชท</span><span class="chev" aria-hidden="true">▾</span></button><div id="ofChat"></div><div id="ofKey" hidden></div><form id="ofForm" autocomplete="off"><input id="ofIn" maxlength="500" enterkeyhint="send"><button id="ofSend" type="submit">ส่ง</button></form></div></div>' +
       '<div id="ofMenu" hidden><div class="mCard"><h3>เมนู</h3><button type="button" id="syncBtn">🔄 ซิงก์ Drive ตอนนี้</button><button type="button" id="mQr">📱 เปิดบนมือถือเครื่องอื่น (QR)</button><div id="mQrBox" hidden></div>' +
       '<button type="button" id="mKey">🔑 ใส่ Gemini API key (ให้ภูติคุยได้)</button><div id="mKeyBox" hidden><div id="mKeySt" class="muted"></div><input id="mKeyIn" type="password" placeholder="วาง API key ที่นี่" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="krow"><button type="button" id="mKeySave">บันทึก</button><button type="button" id="mKeyDel" class="plain">ลบ key</button></div></div>' +
-      '<button type="button" id="mNotify">🔔 แจ้งเตือนเมื่อมีแฟ้มอัปเดตใหม่</button><div id="mNotifyBox" hidden><div id="mNotifySt" class="muted"></div><div class="krow"><button type="button" id="mNotifyOn">เปิด</button><button type="button" id="mNotifyOff" class="plain">ปิด</button><button type="button" id="mNotifyTest" class="plain">ส่งทดสอบ</button></div></div>' +
+      '<button type="button" id="mNotify">🔔 แจ้งเตือนบนมือถือ (เด้งแม้ปิดแอป)</button><div id="mNotifyBox" hidden><div id="mNotifySt" class="muted"></div><div class="krow"><button type="button" id="mNotifyOn">เปิด</button><button type="button" id="mNotifyOff" class="plain">ปิด</button><button type="button" id="mNotifyTest" class="plain">ส่งทดสอบ</button></div></div>' +
       '<button type="button" id="mClear">🧹 ล้างประวัติแชต…</button><div id="mClearBox" hidden><select id="mClearSel">' + spOpts + '</select><div class="krow"><button type="button" id="mClearGo">ล้าง</button></div></div>' +
       '<button type="button" id="lockBtn">🔒 ล็อกแอป (ต้องใส่รหัสผ่านใหม่)</button><button type="button" id="cfgBtn">ล้างการตั้งค่าเครื่องนี้</button><button type="button" id="mClose" class="plain">ปิด</button></div></div><div id="ofAsk" hidden></div>';
     if (!o.dataset.sw) {                                          // swipe up from the bottom edge opens the quick menu (bound once: #office lives for the whole session)
@@ -331,16 +338,42 @@
     $("ofPeriodList").innerHTML = list.map(function (p, k) { return '<button type="button" class="' + (p.from === cur.from ? "on" : "") + '" data-per="' + k + '">' + esc(periodLabel(p)) + (k === 0 ? " (รอบนี้)" : "") + "</button>"; }).join(""); $("ofPeriodMenu").hidden = false;
   }
   function pickPeriod(k) { var list = periodList(); ofPer = k === 0 ? null : list[k]; calM = null; calSel = null; $("ofPeriodMenu").hidden = true; headerOffice(); if (ofDef && ofData && $("office").classList.contains("open")) renderBody(ofDef, ofData); }
+  function swReady() {                                          // the worker may not be active yet (first visit, or a browser that blocks it): do not wait forever
+    return Promise.race([navigator.serviceWorker.ready, new Promise(function (_, rej) { setTimeout(function () { rej(new Error("ระบบแจ้งเตือนยังไม่พร้อม ปิดแอปแล้วเปิดใหม่อีกครั้ง")); }, 6000); })]);
+  }
+  function pushSupport() {
+    var ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+    if (ios && !standalone) return "ios-install";
+    return ("serviceWorker" in navigator && "PushManager" in window && "Notification" in window) ? "ok" : "none";
+  }
+  function u8(b64) { var p = "=".repeat((4 - b64.length % 4) % 4), raw = atob((b64 + p).replace(/-/g, "+").replace(/_/g, "/")), a = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i); return a; }
+  function notifyShow(t) { var e = $("mNotifySt"); if (e) e.textContent = t; }
   function openNotifyBox() {
-    $("ofMenu").hidden = false; $("mNotifyBox").hidden = false; $("mNotifySt").textContent = "กำลังตรวจ…";
-    api("notify_status").then(function (r) { $("mNotifySt").textContent = (r.on ? "🔔 เปิดอยู่ — จะส่งอีเมลหาคุณเมื่อมีแฟ้มใหม่ (นับเป็นแฟ้ม ไม่เกินชั่วโมงละครั้ง)" : "🔕 ปิดอยู่") + (r.error ? " · ⚠️ " + r.error : ""); })
-      .catch(function (e) { if (!authFail(e)) $("mNotifySt").textContent = /unknown action/.test(e.message) ? "สคริปต์ยังไม่อัปเดต" : e.message; });
+    $("ofMenu").hidden = false; $("mNotifyBox").hidden = false; notifyShow("กำลังตรวจ…"); var sup = pushSupport();
+    if (sup === "ios-install") { notifyShow("บน iPhone ต้องเพิ่มแอปลงหน้าจอโฮมก่อน: กดปุ่มแชร์ใน Safari → เพิ่มลงหน้าจอโฮม แล้วเปิดแอปจากไอคอนนั้น (ต้อง iOS 16.4 ขึ้นไป) จึงจะเปิดแจ้งเตือนได้"); return; }
+    if (sup === "none") { notifyShow("เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนแบบเด้ง"); return; }
+    Promise.all([api("notify_status"), swReady().then(function (r) { return r.pushManager.getSubscription(); })]).then(function (r) {
+      var st = r[0], sub = r[1];
+      notifyShow((st.on && sub ? "🔔 เปิดอยู่ในเครื่องนี้" : st.on ? "🔔 เปิดในระบบ แต่เครื่องนี้ยังไม่ได้เปิด (กด “เปิด”)" : "🔕 ปิดอยู่") + " · เครื่องที่ผูกไว้ " + st.devices + (st.error ? " · ⚠️ " + st.error : "") + (Notification.permission === "denied" ? " · ⚠️ สิทธิ์แจ้งเตือนถูกปิดไว้ในตั้งค่าเครื่อง" : ""));
+    }).catch(function (e) { if (!authFail(e)) notifyShow(/unknown action/.test(e.message) ? "สคริปต์ยังไม่อัปเดต" : e.message); });
   }
   function setNotify(on) {
-    api("notify_set", { on: on }).then(function () { toast(on ? "เปิดแจ้งเตือนแล้ว" : "ปิดแจ้งเตือนแล้ว"); openNotifyBox(); if (on) testNotify(); }).catch(function (e) { if (!authFail(e)) toast(e.message); });
+    var sup = pushSupport(); if (sup !== "ok") { openNotifyBox(); return; }
+    if (!on) {
+      swReady().then(function (r) { return r.pushManager.getSubscription(); }).then(function (sub) { var ep = sub && sub.endpoint; return Promise.all([sub ? sub.unsubscribe() : 0, ep ? api("push_unsubscribe", { endpoint: ep }) : 0]); })
+        .then(function () { return api("notify_set", { on: false }); }).then(function () { toast("ปิดแจ้งเตือนแล้ว"); openNotifyBox(); }).catch(function (e) { if (!authFail(e)) notifyShow("⚠️ " + e.message); });
+      return;
+    }
+    Notification.requestPermission().then(function (perm) {         // asked straight from the tap, as iOS requires
+      if (perm !== "granted") throw new Error("ยังไม่ได้อนุญาตการแจ้งเตือน (เปิดได้ที่ ตั้งค่า iPhone → Notedy → การแจ้งเตือน)");
+      idbSet("cfg", cfg); return Promise.all([swReady(), api("push_key")]);
+    }).then(function (r) { return r[0].pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(r[1].key) }); })
+      .then(function (sub) { return api("push_subscribe", { endpoint: sub.endpoint }); }).then(function () { return api("notify_set", { on: true }); })
+      .then(function () { toast("เปิดแจ้งเตือนแล้ว"); return testNotify(); }).catch(function (e) { if (!authFail(e)) notifyShow("⚠️ " + e.message); });
   }
   function testNotify() {
-    api("notify_test").then(function (r) { $("mNotifySt").textContent = r.ok ? "ส่งอีเมลทดสอบแล้ว ดูที่ Gmail (ถ้าไม่เห็นดูใน Spam)" : "⚠️ " + r.error; }).catch(function (e) { if (!authFail(e)) $("mNotifySt").textContent = "⚠️ " + e.message; });
+    return api("notify_test").then(function (r) { notifyShow(r.ok ? "ส่งแจ้งเตือนทดสอบแล้ว ควรเด้งภายในไม่กี่วินาที (ถ้าไม่เด้ง ลองปิดแล้วเปิดใหม่)" : "⚠️ " + r.error); })
+      .catch(function (e) { if (!authFail(e)) notifyShow("⚠️ " + e.message); });
   }
   function clearChats() {
     var sp = $("mClearSel").value; if (!confirm(sp ? "ล้างประวัติแชตของ" + peerName(sp) + "? (ภูติตัวอื่นที่เคยคุยกันยังจำได้)" : "ล้างประวัติแชตของภูติทุกตัว?")) return;
@@ -655,7 +688,7 @@
     { k: ["รหัส", "pin", "ลืม"], q: "ลืมรหัสผ่านแอป", a: "ให้ผู้พัฒนารัน resetPin ในสคริปต์ แล้วเปิดแอปตั้งรหัสใหม่ (ใส่ผิด 5 ครั้งล็อก 15 นาที)" },
     { k: ["มือถือ", "เครื่องอื่น", "qr", "คอม"], q: "เปิดบนเครื่องอื่น", a: "บนเครื่องที่เปิดอยู่ กด ⚙ → เปิดบนมือถือ (QR) แล้วสแกนด้วยกล้อง จากนั้นใส่รหัสผ่านแอปเดิม" },
     { k: ["pdf", "พีดีเอฟ", "รายงาน", "hr"], q: "สร้าง PDF ส่ง HR", a: "ไปที่นิวนิว (หรือดรอวี่) เลือกช่วงวันที่แล้วกดสร้าง PDF จะเปิดให้บันทึกลงโทรศัพท์ (Files) หรือแชร์ต่อ" },
-    { k: ["แจ้งเตือน", "เมล", "อีเมล"], q: "การแจ้งเตือนแฟ้มใหม่", a: "กด ⚙ → แจ้งเตือน เปิดแล้วจะส่งอีเมลหาตัวเองเมื่อมีแฟ้มใหม่ (นับเป็นแฟ้ม) Gmail บน iPhone จะเด้งเตือนให้" }
+    { k: ["แจ้งเตือน", "เด้ง", "popup", "noti"], q: "การแจ้งเตือนแฟ้มใหม่", a: "บน iPhone เพิ่มแอปลงหน้าจอโฮมก่อน (แชร์ → เพิ่มลงหน้าจอโฮม) เปิดจากไอคอน แล้วกด ⚙ → แจ้งเตือนบนมือถือ → เปิด จะเด้งเตือนเมื่อมีแฟ้มอัปเดตใหม่ (นับเป็นแฟ้ม) แม้ปิดแอปอยู่" }
   ];
   function faqAnswer(i) { var f = FAQ[i]; return card(esc(f.q), '<div style="line-height:1.7">' + esc(f.a) + "</div>"); }
   function pdfRange() { var f = $("pdFrom") && $("pdFrom").value, t = $("pdTo") && $("pdTo").value, pr = periodSel(); return { from: f || pr.from, to: t || pr.to }; }
@@ -876,7 +909,7 @@
     var nav = t.closest("[data-nav]"); if (nav && !nav.disabled) { var nd = addDays(day, +nav.dataset.nav); if (nd <= todayStr()) { day = nd; if (noteOpen) loadNote(); else load(); } return; }
     var act = t.closest("[data-nd]"); if (act) { onAction(act.dataset.nd, act); return; }
     if (t.closest("#syncBtn")) { syncNow(); return; }
-    if (t.closest("#cfgBtn")) { if (confirm("ล้างการตั้งค่าบนเครื่องนี้และตั้งค่าใหม่?")) { try { localStorage.removeItem(CFG_KEY); } catch (e3) {} cfg = null; renderSetup(); } return; }
+    if (t.closest("#cfgBtn")) { if (confirm("ล้างการตั้งค่าบนเครื่องนี้และตั้งค่าใหม่?")) { clearCfgStore(); cfg = null; renderSetup(); } return; }
     if (t.closest("#lockBtn")) { cfg.p = ""; saveCfg(cfg); toast("ล็อกแล้ว"); gatePin(); return; }
     if (t.closest("#pinGo")) { submitPin(); return; }
     if (t.closest("#retry")) { load(); return; }
