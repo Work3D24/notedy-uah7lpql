@@ -58,6 +58,7 @@
   function Office(root, o) {
     var me = this; me.o = o || {}; me.root = root; me.night = false; me.A = { chars: [], decos: [], bg: null }; me.L = null; me.it = {}; me.badges = {}; me.sel = null;
     root.classList.add('of'); if (me.o.editor) root.classList.add('of-ed');
+    me.fill = el('img', 'of-fill'); me.fill.alt = ''; me.fill.draggable = false; root.appendChild(me.fill);       /* blurred copy of the BG behind a letter-boxed scene */
     me.scroll = el('div', 'of-scroll'); me.wrap = el('div', 'of-wrap'); me.bg = el('img', 'of-bg'); me.bg.draggable = false; me.bg.alt = '';
     me.cBack = el('div', 'of-layer'); me.cChars = el('div', 'of-layer'); me.cFront = el('div', 'of-layer'); me.pin = el('div', 'of-pin');
     me.wrap.appendChild(me.bg); me.wrap.appendChild(me.cBack); me.wrap.appendChild(me.cChars); me.wrap.appendChild(me.cFront);
@@ -109,7 +110,7 @@
   Office.prototype.refresh = function () {
     var me = this, L = me.L, A = me.A, n = me.night, b = A.bg;
     if (!me._rz) { me._rz = 1; window.addEventListener('resize', function () { if (me.L && !me._dead) me._fit(); }); }
-    if (b) { me.bg.src = me.u(n ? b.night : b.day); me.bg.style.width = L.bg.w + 'px'; me.bg.style.left = L.bg.x + '%'; me.bg.style.top = L.bg.y + 'px'; }
+    if (b) { me.bg.src = me.fill.src = me.u(n ? b.night : b.day); me.bg.style.width = L.bg.w + 'px'; me.bg.style.left = L.bg.x + '%'; me.bg.style.top = L.bg.y + 'px'; }
     me._fit(); me._fxApply();
     me.root.classList.toggle('bgsel', me.sel === 'bg'); me.root.classList.toggle('fxsel', me.sel === 'fx');
     Object.keys(me.it).forEach(function (k) {
@@ -124,7 +125,7 @@
     (lock ? me.wrap : me.root).appendChild(me.pin);
     if (lock) {
       var rw = me.root.clientWidth || 390, rh = me.root.clientHeight || 844;
-      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', Math.max(rw / 390, rh / 844)); me.scroll.scrollTop = 0;
+      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', Math.min(rw / 390, rh / 844)); me.scroll.scrollTop = 0;   /* fit: the whole arranged scene stays visible */
     } else { me.wrap.style.height = me.L.room.h + 'px'; me.wrap.style.removeProperty('--s'); }
   };
   Office.prototype.u = function (path) { return (this.o.base || '') + path; };      /* where the images live when the page is not next to them */

@@ -184,20 +184,29 @@
     });
   }
 
+  function parseSetup(text) {                                   // accepts the whole link from the sheet (…#setup=…) or just the code after setup=
+    var t = String(text || "").trim(), m = /setup=([A-Za-z0-9_\-=]+)/.exec(t), code = m ? m[1] : (/^[A-Za-z0-9_\-=]{80,}$/.test(t) ? t : "");
+    if (!code) return null;
+    try { var o = JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, "+").replace(/_/g, "/"))))); if (URL_OK.test(o.u) && TOKEN_OK.test(o.t)) return { u: o.u, t: o.t, p: "" }; } catch (e) { /* not a setup link */ }
+    return null;
+  }
   function renderSetup(msg) {
     showApp();
-    $("app").innerHTML = '<div class="top"><img src="assets/Notedy.png" alt=""><div class="ttl"><b>Notedy</b><small>ตั้งค่าครั้งแรก</small></div></div>' +
-      '<div class="setup"><h2>เชื่อมกับ Google ของคุณ</h2>' + (msg ? '<div class="banner">' + esc(msg) + "</div>" : "") +
-      '<ol><li>เปิด Google Sheet "Notedy Cloud" ของคุณ แล้วไปแท็บ <b>setup</b></li><li>แตะลิงก์ในเซลล์ A2 (ลิงก์ตั้งค่า) บนเครื่องนี้ หรือกรอกด้านล่างเอง</li></ol>' +
-      '<label class="muted">Web app URL</label><input id="cfgU" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off">' +
-      '<label class="muted">รหัสลับ (64 ตัวอักษร)</label><input id="cfgT" placeholder="รหัสลับ" autocomplete="off" autocapitalize="off">' +
-      '<button class="setup go" id="cfgGo" type="button">เชื่อมต่อ</button></div>';
+    $("app").innerHTML = '<div class="top"><img src="assets/Notedy.png" alt=""><div class="ttl"><b>Notedy</b><small>เชื่อมครั้งแรก (ทำครั้งเดียวต่อเครื่อง)</small></div></div>' +
+      '<div class="setup"><h2>เชื่อมแอปกับ Google ของคุณ</h2>' + (msg ? '<div class="banner">' + esc(msg) + "</div>" : "") +
+      '<div class="how"><b>วิธีที่ง่ายสุด: สแกน QR</b><br>บนคอมที่เปิดแอปนี้อยู่แล้ว กด ⚙ → “เปิดบนมือถือ (QR)” แล้วสแกนด้วยกล้องมือถือ</div>' +
+      '<div class="how"><b>หรือวางลิงก์:</b><br>เปิดชีต “Notedy Cloud” → แท็บ <b>setup</b> → เซลล์ <b>A2</b> → คัดลอกทั้งเซลล์ แล้ววางตรงนี้</div>' +
+      '<textarea id="cfgLink" rows="3" placeholder="วางลิงก์ตั้งค่าทั้งเส้นที่นี่" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>' +
+      '<button class="setup go" id="cfgGo" type="button">เชื่อมต่อ</button>' +
+      '<details class="adv"><summary>กรอกเองแบบแยกช่อง (ขั้นสูง)</summary><label class="muted">Web app URL</label><input id="cfgU" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off">' +
+      '<label class="muted">รหัสเชื่อมต่อ (64 ตัวอักษร ในลิงก์หลัง setup=)</label><input id="cfgT" placeholder="รหัสเชื่อมต่อ" autocomplete="off" autocapitalize="off"></details>' +
+      '<p class="muted">หลังเชื่อมแล้วแอปจะขอ “รหัสผ่านแอป 6 หลัก” ที่คุณตั้งเอง (คนละอันกับรหัสในลิงก์)</p></div>';
   }
   function renderPin(create, msg) {
     showApp();
-    var top = '<div class="top"><img src="assets/Notedy.png" alt=""><div class="ttl"><b>Notedy</b><small>' + (create ? "ตั้งรหัสเข้าแอป" : "ใส่รหัสเข้าแอป") + "</small></div></div>";
-    $("app").innerHTML = top + '<div class="setup pinbox"><h2>' + (create ? "ตั้งรหัส 6 หลัก" : "ใส่รหัส 6 หลัก") + "</h2>" + (msg ? '<div class="banner">' + esc(msg) + "</div>" : "") +
-      '<p class="muted">' + (create ? "ใช้เข้าแอปนี้ ตั้งครั้งเดียว เครื่องนี้จะจำไว้ให้ ไม่ต้องกรอกอีก (เครื่องใหม่ต้องกรอกรหัสนี้)" : "ใส่รหัสที่ตั้งไว้ เครื่องนี้จะจำไว้หลังกรอกถูก") + "</p>" +
+    var top = '<div class="top"><img src="assets/Notedy.png" alt=""><div class="ttl"><b>Notedy</b><small>' + (create ? "ตั้งรหัสผ่านแอป" : "ใส่รหัสผ่านแอป") + "</small></div></div>";
+    $("app").innerHTML = top + '<div class="setup pinbox"><h2>' + (create ? "ตั้งรหัสผ่านแอป (ตัวเลข 6 หลัก)" : "ใส่รหัสผ่านแอป (ตัวเลข 6 หลัก)") + "</h2>" + (msg ? '<div class="banner">' + esc(msg) + "</div>" : "") +
+      '<p class="muted">' + (create ? "คิดเลข 6 หลักขึ้นมาเอง (เช่นวันเกิด) ไว้เปิดแอปนี้ ตั้งครั้งเดียว เครื่องนี้จะจำไว้ ไม่ต้องกรอกอีก · เครื่องใหม่ต้องใส่เลขเดียวกันนี้" : "ใส่เลข 6 หลักที่คุณตั้งไว้ตอนแรก (ไม่ใช่รหัสในลิงก์) เครื่องนี้จะจำไว้หลังใส่ถูก") + "</p>" +
       '<input id="pinA" class="pinIn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" autocapitalize="off" placeholder="● ● ● ● ● ●" aria-label="รหัส 6 หลัก">' +
       (create ? '<input id="pinB" class="pinIn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" autocapitalize="off" placeholder="พิมพ์ซ้ำอีกครั้ง" aria-label="พิมพ์รหัสซ้ำ">' : "") +
       '<button class="setup go" id="pinGo" type="button">' + (create ? "ตั้งรหัสและเข้าแอป" : "เข้าแอป") + "</button></div>";
@@ -236,6 +245,36 @@
 
   /* ---------- office room (home) + chat with the spirits ---------- */
   var QUICK = { Notedy: [["day", "📒 เปิดโน้ตรายวัน"]], Minty: [["pending", "📥 ไปตรวจไฟล์"]], Drivey: [["sync", "🔄 ซิงก์ Drive ตอนนี้"]] };
+  /* per-spirit colours (same palette as the PC app): a = accent, s/s2 = soft backgrounds, d = dark text */
+  var THEMES = {
+    Notedy: { a: "#4b64c4", s: "#eef1ff", s2: "#fff4e6", d: "#2c3a86", pat: "star" }, Newnew: { a: "#5b7bdb", s: "#eaf2ff", s2: "#fff1e6", d: "#2f4392", pat: "doc" },
+    Backy: { a: "#8d86d9", s: "#2b2943", s2: "#37345a", d: "#f0eeff", pat: "moon", dark: true, av: "#cfcaf0" }, Minty: { a: "#6b9a4f", s: "#eaf6df", s2: "#fbfff3", d: "#2f5a2a", pat: "leaf" },
+    Drivey: { a: "#5c95ed", s: "#e3f0ff", s2: "#f6faff", d: "#244a8c", pat: "cloud" }, Clouddy: { a: "#e7819b", s: "#ffe8f0", s2: "#fff8fb", d: "#8c2f55", pat: "heart" },
+    Sunny: { a: "#e09145", s: "#ffefcf", s2: "#fffaf0", d: "#8a4b12", pat: "sun" }, Linky: { a: "#6281e3", s: "#e9edff", s2: "#f8f9ff", d: "#2f3f94", pat: "link" },
+    Searchy: { a: "#a66d5d", s: "#f5e6df", s2: "#fffaf7", d: "#5c3329", pat: "paw" }, Drawy: { a: "#e3719e", s: "#ffe6f1", s2: "#fff7fb", d: "#8a2b57", pat: "spark" },
+    Planly: { a: "#837ae4", s: "#edeaff", s2: "#faf9ff", d: "#40368f", pat: "dots" }, Buddy: { a: "#e1a45b", s: "#ffedd2", s2: "#fffaf2", d: "#7a4a14", pat: "paw" }
+  };
+  var SHAPES = {
+    star: "<path d='M14 8l2.2 5.3 5.3 2.2-5.3 2.2L14 23l-2.2-5.3L6.5 15.5l5.3-2.2z'/><circle cx='26' cy='9' r='1.6'/>", doc: "<rect x='8' y='7' width='12' height='15' rx='2'/><path d='M11 12h6M11 16h6' stroke='#fff' stroke-width='1.4'/>",
+    moon: "<path d='M20 7a9 9 0 1 0 7 14 7.5 7.5 0 0 1-7-14z'/><circle cx='28' cy='10' r='1.5'/><circle cx='9' cy='27' r='1.2'/>", leaf: "<path d='M8 24C8 13 16 8 26 8c0 11-7 17-18 16z'/>",
+    cloud: "<circle cx='13' cy='19' r='5'/><circle cx='20' cy='15' r='6.5'/><circle cx='27' cy='19' r='5'/><rect x='9' y='19' width='22' height='5' rx='2.5'/>", heart: "<circle cx='11' cy='13' r='5'/><circle cx='21' cy='13' r='5'/><path d='M6.3 15.6L16 25.5l9.7-9.9z'/>",
+    sun: "<circle cx='16' cy='16' r='5'/><path d='M16 5v4M16 23v4M5 16h4M23 16h4M8 8l3 3M21 21l3 3M24 8l-3 3M11 21l-3 3' stroke='COLOR' stroke-width='2' stroke-linecap='round'/>", link: "<circle cx='13' cy='16' r='6' fill='none' stroke='COLOR' stroke-width='2.6'/><circle cx='22' cy='16' r='6' fill='none' stroke='COLOR' stroke-width='2.6'/>",
+    paw: "<ellipse cx='16' cy='21' rx='6' ry='5'/><circle cx='9' cy='14' r='2.5'/><circle cx='14' cy='9.5' r='2.5'/><circle cx='20' cy='9.5' r='2.5'/><circle cx='25' cy='14' r='2.5'/>", spark: "<path d='M16 5l2 6.5L24.5 13.5 18 15.5 16 22l-2-6.5L7.5 13.5 14 11.5z'/><circle cx='26' cy='24' r='1.6'/>",
+    dots: "<circle cx='14' cy='14' r='2.6'/><circle cx='28' cy='28' r='2.6'/><circle cx='14' cy='42' r='2.6'/><circle cx='42' cy='14' r='2.6'/>"
+  };
+  function theme(id) { return THEMES[id] || THEMES.Notedy; }
+  function patUrl(kind, color) {
+    var sh = (SHAPES[kind] || SHAPES.dots).replace(/COLOR/g, color), svg = "<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56'><g fill='" + color + "' opacity='.17'>" + sh + "<g transform='translate(27 27)'>" + sh + "</g></g></svg>";
+    return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+  }
+  function applyTheme(id) {
+    var t = theme(id), sh = $("ofSheet"); if (!sh) return;
+    sh.style.setProperty("--t1", t.a); sh.style.setProperty("--t2", t.s); sh.style.setProperty("--t3", t.s2); sh.style.setProperty("--td", t.d); sh.style.setProperty("--tpat", patUrl(t.pat, t.dark ? "#ffffff" : t.a));
+    sh.dataset.dark = t.dark ? "1" : "0";
+  }
+  function avatar(id) { var t = theme(id); return '<span class="av" style="background-color:' + (t.av || t.s) + ";background-image:url(office/img/chars/" + id + ".webp);border-color:" + t.a + '"></span>'; }
+  function trunc(x, n) { x = String(x || ""); return x.length > n ? x.slice(0, n - 1) + "…" : x; }
+  function b64url(str) { return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, "-").replace(/\//g, "_"); }
   function isNight() { var h = parseInt(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date()), 10); return h >= 18 || h < 6; }
   function authFail(e) {                                         // PIN changed / reset elsewhere or token revoked
     if (e.code && PIN_CODES[e.code]) { cfg.p = ""; saveCfg(cfg); gatePin(e.code === "pin_setup" ? "" : e.message); return true; }
@@ -252,10 +291,12 @@
     var o = $("office"); if (!o) { o = document.createElement("div"); o.id = "office"; document.body.insertBefore(o, $("toast")); }
     o.hidden = false; o.classList.remove("open");
     o.innerHTML = '<div id="ofStage"></div><div class="ofTop"><div class="ttl"><b>Notedy</b><small id="ofSub">กำลังโหลด…</small></div><button class="pill" id="ofPend" type="button">📥 ค้างตรวจ</button>' +
-      '<button class="ico" id="syncBtn" type="button" aria-label="ซิงก์ Drive ตอนนี้">🔄</button><button class="ico" id="lockBtn" type="button" aria-label="ล็อกแอป">🔒</button></div>' +
+      '<button class="ico" id="syncBtn" type="button" aria-label="ซิงก์ Drive ตอนนี้">🔄</button><button class="ico" id="menuBtn" type="button" aria-label="เมนู">⚙</button></div>' +
       '<div class="ofTabs"><button class="on" data-v="office" type="button"><b>🏡</b>ห้อง</button><button data-v="pending" type="button"><b>📥</b>ค้างตรวจ</button><button data-v="day" type="button"><b>📒</b>โน้ต</button></div>' +
-      '<div id="ofScrim"></div><div id="ofSheet" role="dialog" aria-modal="true"><div class="grab"></div><div class="hd"><img id="ofImg" alt=""><div><h2 id="ofNm"></h2><div class="rl" id="ofRl"></div></div><button class="x" id="ofX" type="button" aria-label="ปิด">✕</button></div>' +
-      '<div id="ofChat"></div><div class="ofQuick" id="ofQuick"></div><form id="ofForm" autocomplete="off"><input id="ofIn" maxlength="500" placeholder="พิมพ์คุยกับภูติ…" enterkeyhint="send"><button id="ofSend" type="submit">ส่ง</button></form></div>';
+      '<div id="ofScrim"></div><div id="ofSheet" role="dialog" aria-modal="true" data-dark="0"><div class="grab"></div><div class="phead"><img id="ofImg" alt=""><div><h2 id="ofNm"></h2><small id="ofRl"></small></div><button class="x" id="ofX" type="button" aria-label="ปิด">✕</button></div>' +
+      '<div class="strip" id="ofStrip"></div><div id="ofPane"><div class="ofQuick" id="ofQuick"></div><div id="ofChat"></div><form id="ofForm" autocomplete="off"><input id="ofIn" maxlength="500" enterkeyhint="send"><button id="ofSend" type="submit">ส่ง</button></form></div></div>' +
+      '<div id="ofMenu" hidden><div class="mCard"><h3>เมนู</h3><button type="button" id="mQr">📱 เปิดบนมือถือเครื่องอื่น (QR)</button><div id="mQrBox" hidden></div>' +
+      '<button type="button" id="lockBtn">🔒 ล็อกแอป (ต้องใส่รหัสผ่านใหม่)</button><button type="button" id="cfgBtn">ล้างการตั้งค่าเครื่องนี้</button><button type="button" id="mClose" class="plain">ปิด</button></div></div><div id="ofAsk" hidden></div>';
     loadOfficeAssets().then(function () {
       if (view !== "office" || office) return;
       office = new Office($("ofStage"), { base: "office/", onTap: openSheet }); office.load(ofAssets, ofLayout, isNight()); office.setBadges(ofBadges);
@@ -281,6 +322,11 @@
     return def.say;
   }
   function bubble(cls, text) { var d = document.createElement("div"); d.className = "m " + cls; d.textContent = text; $("ofChat").appendChild(d); return d; }
+  function spRow(id, text, typing) {                             // LINE-style row: avatar + name + bubble
+    var r = Office.BY[id] || { th: id }, d = document.createElement("div"); d.className = "mrow";
+    d.innerHTML = avatar(id) + '<div class="mcol"><span class="who">' + esc(r.th) + '</span><div class="m sp' + (typing ? " typing" : "") + '">' + (typing ? "<i></i><i></i><i></i>" : esc(text)) + "</div></div>";
+    $("ofChat").appendChild(d); return d;
+  }
   function bubbleActs(entryId, actions, done) {
     if (!actions || !actions.length) return;
     var w = document.createElement("div"); w.className = "acts";
@@ -295,41 +341,78 @@
     return a.type === "open_pending" ? "📥 ไปหน้าค้างตรวจ" : a.type === "open_day" ? "📒 เปิดโน้ต " + (a.date ? shortDate(a.date) : "วันนี้") : a.type === "sync" ? "🔄 ซิงก์ Drive ตอนนี้"
       : a.type === "decide_folder" ? "✓ ตั้ง “" + a.folder + "” เป็น" + (a.decision === "work" ? "งาน" : "ไม่ใช่งาน") : a.type;
   }
-  function renderEntries(entries) {
+  function peerName(id) { var r = Office.BY[id]; return r ? r.th : "เพื่อนภูติ"; }
+  function renderEntries(entries, owner) {
     var box = $("ofChat"); box.innerHTML = "";
     var show = (entries || []).filter(function (e) { return e.role === "user" || e.role === "model" || e.role === "ask_out" || e.role === "ask_answer"; }).slice(-24);
     show.forEach(function (e) {
       if (e.role === "user") bubble("me", e.text);
-      else if (e.role === "model") { bubble("sp", e.text); bubbleActs(e.id, e.actions, e.done); }
-      else if (e.role === "ask_out") bubble("note", "↪ ถาม" + peerName(e.peer) + ": " + e.text);
-      else bubble("note", "↩ " + peerName(e.peer) + " ตอบ: " + e.text);
+      else if (e.role === "model") { spRow(owner, e.text); bubbleActs(e.id, e.actions, e.done); }
+      else if (e.role === "ask_out") bubble("note", "↪ " + peerName(owner) + " ไปถาม" + peerName(e.peer) + ": " + trunc(e.text, 120));
+      else spRow(e.peer, e.text);
     });
     box.scrollTop = box.scrollHeight;
   }
-  function peerName(id) { var r = Office.BY[id]; return r ? r.th : "เพื่อนภูติ"; }
+  function buildStrip(active) {
+    var st = $("ofStrip"); if (!st || !ofAssets) return;
+    st.innerHTML = Office.ROSTER.filter(function (r) { return ofAssets.chars.some(function (c) { return c.id === r.id; }); }).map(function (r) {
+      var c = ofAssets.chars.filter(function (x) { return x.id === r.id; })[0];
+      return '<button type="button" data-sp="' + r.id + '" class="' + (r.id === active ? "on" : "") + '"><img src="' + office.u(c.day) + '" alt=""><span>' + esc(r.th) + "</span></button>";
+    }).join("");
+    var on = st.querySelector(".on"); if (on) st.scrollLeft = on.offsetLeft - st.clientWidth / 2 + on.offsetWidth / 2;
+  }
   function openSheet(def, asset) {
-    ofSpirit = def.id; var th = asset.theme || { bg: "#3f9a6b", fg: "#fff" }, sh = $("ofSheet");
-    sh.style.setProperty("--tc", th.bg); sh.style.setProperty("--tx", th.fg);
-    $("ofImg").src = office.u(office.night ? asset.night : asset.day); $("ofNm").textContent = def.th; $("ofRl").textContent = def.role;
-    $("ofChat").innerHTML = ""; bubble("sp", sayFor(def));
+    askStop(); ofSpirit = def.id; applyTheme(def.id);
+    $("ofImg").src = office.u(office.night ? asset.night : asset.day); $("ofNm").textContent = def.th + " (" + def.id + ")"; $("ofRl").textContent = def.role + " · คุยกับ AI ได้ (Gemini ฟรี)";
+    buildStrip(def.id); $("ofChat").innerHTML = ""; spRow(def.id, sayFor(def));
     $("ofQuick").innerHTML = (QUICK[def.id] || []).map(function (q) { return '<button type="button" data-q="' + q[0] + '">' + q[1] + "</button>"; }).join("");
-    $("ofIn").placeholder = "คุยกับ" + def.th + "…"; $("office").classList.add("open");
+    $("ofIn").placeholder = "พิมพ์คุยกับ" + def.th + "…"; $("office").classList.add("open");
     var me = def.id;
-    api("chat_log", { spirit: def.id }).then(function (r) { if (ofSpirit === me && $("ofChat") && r.entries && r.entries.length) renderEntries(r.entries); })
+    api("chat_log", { spirit: def.id }).then(function (r) { if (ofSpirit === me && $("ofChat") && r.entries && r.entries.length) renderEntries(r.entries, me); })
       .catch(function (e) { if (ofSpirit === me && !authFail(e) && $("ofChat")) bubble("note", /unknown action/.test(e.message) ? "ระบบแชทยังไม่เปิดใช้ (อัปเดตสคริปต์ก่อน)" : e.message); });
   }
   function closeSheet() { var o = $("office"); if (o) o.classList.remove("open"); ofSpirit = null; try { document.activeElement.blur(); } catch (e) {} }
   function sendChat() {
     var inp = $("ofIn"), msg = (inp.value || "").trim(); if (!msg || chatBusy || !ofSpirit) return;
-    chatBusy = true; inp.value = ""; $("ofSend").disabled = true; var me = ofSpirit; bubble("me", msg); var wait = bubble("note", "กำลังคิด… (ตอบครั้งแรกอาจช้านิดนึง)"); $("ofChat").scrollTop = 1e6;
+    chatBusy = true; inp.value = ""; $("ofSend").disabled = true; var me = ofSpirit; bubble("me", msg); var wait = spRow(me, "", true); $("ofChat").scrollTop = 1e6;
     api("chat", { spirit: me, message: msg }, 110000).then(function (r) {
       if (ofSpirit !== me) return; wait.remove();
-      (r.asked || []).forEach(function (id) { bubble("note", "↪ ถาม" + peerName(id) + " แล้ว"); });
-      bubble("sp", r.reply); bubbleActs(r.id || "x" + Date.now(), r.actions, []);
+      spRow(me, r.reply); bubbleActs(r.id || "x" + Date.now(), r.actions, []);
+      if (r.asked && r.asked.length) askFromLog(me, r.asked);
     }).catch(function (e) {
       if (authFail(e)) return; if (ofSpirit !== me) return; wait.remove();
-      var d = bubble("err", /GEMINI_KEY|ยังไม่ได้ใส่/.test(e.message) ? "ยังไม่ได้ใส่ Gemini API key ในสคริปต์ (ดูวิธีใน README)" : e.message);
+      bubble("err", /GEMINI_KEY|ยังไม่ได้ใส่/.test(e.message) ? "ยังไม่ได้ใส่ Gemini API key ในสคริปต์ (ดูวิธีใน README)" : e.message);
     }).then(function () { chatBusy = false; var b = $("ofSend"); if (b) b.disabled = false; var c = $("ofChat"); if (c) c.scrollTop = c.scrollHeight; });
+  }
+  /* "A runs to ask B": a small animated card played after the answer arrives */
+  var askQ = [], askT = 0;
+  function askFromLog(me, asked) {
+    api("chat_log", { spirit: me }).then(function (r) {
+      var es = r.entries || [], pairs = [];
+      asked.forEach(function (p) {
+        var q = null, a = null; es.forEach(function (e) { if (e.peer === p && e.role === "ask_out") q = e; if (e.peer === p && e.role === "ask_answer") a = e; });
+        if (q && a) pairs.push({ a: me, b: p, q: q.text, ans: a.text });
+      });
+      if (pairs.length) { askQ = pairs; askNext(); }
+    }).catch(function () {});
+  }
+  function askNext() {
+    clearTimeout(askT); var it = askQ.shift(), el = $("ofAsk"); if (!it || !el || !ofAssets) { askStop(); return; }
+    var A = ofAssets.chars.filter(function (c) { return c.id === it.a; })[0], B = ofAssets.chars.filter(function (c) { return c.id === it.b; })[0], ta = theme(it.a), tb = theme(it.b);
+    if (!A || !B) { askStop(); return; }
+    var hearts = ""; for (var i = 0; i < 7; i++) hearts += '<span class="fxHeart" style="left:' + (8 + i * 13) + "%;animation-delay:" + (i * 0.33) + 's">' + ["💖", "✨", "💬", "💗", "⭐", "💞", "✨"][i] + "</span>";
+    el.hidden = false;
+    el.innerHTML = '<div class="fxCard" style="background:linear-gradient(135deg,' + (ta.dark ? ta.a : ta.s) + "," + (tb.dark ? tb.a : tb.s) + ')"><button class="fxClose" id="askClose" type="button" aria-label="ปิด">✕</button><div class="fxRow">' +
+      '<div class="fxSide a"><div class="fxBub">' + esc(trunc(it.q, 90)) + '</div><img src="' + office.u(A.day) + '" alt=""><div class="fxName">' + esc(peerName(it.a)) + "</div></div><div class=\"fxMid\">💬</div>" +
+      '<div class="fxSide b"><div class="fxBub typing" id="askB"><i></i><i></i><i></i></div><img src="' + office.u(B.day) + '" alt=""><div class="fxName">' + esc(peerName(it.b)) + '</div></div></div><div class="fxCap">' + esc(peerName(it.a)) + " ไปถาม" + esc(peerName(it.b)) + "</div>" + hearts + "</div>";
+    askT = setTimeout(function () { var b = $("askB"); if (b) { b.classList.remove("typing"); b.textContent = trunc(it.ans, 150); } askT = setTimeout(askNext, 6500); }, 1500);
+  }
+  function askStop() { clearTimeout(askT); askQ = []; var e = $("ofAsk"); if (e) { e.hidden = true; e.innerHTML = ""; } }
+  function showQr() {
+    if (!cfg || typeof qrcode !== "function") { toast("สร้าง QR ไม่ได้"); return; }
+    var link = location.origin + location.pathname + "#setup=" + b64url(JSON.stringify({ u: cfg.u, t: cfg.t })), box = $("mQrBox");
+    try { var q = qrcode(0, "L"); q.addData(link); q.make(); box.innerHTML = '<img alt="QR เชื่อมมือถือ" src="' + q.createDataURL(5, 4) + '"><p>เปิดกล้องมือถือสแกน แล้วตั้งรหัสผ่านแอป 6 หลักบนมือถือ<br><b>QR นี้มีรหัสลับ</b> สแกนเสร็จแล้วกดปิด อย่าแคปหรือส่งให้ใคร</p>'; box.hidden = false; }
+    catch (e) { toast("สร้าง QR ไม่ได้"); }
   }
   function runAction(key, btn) {
     var a = ofActs[key]; if (!a) return; var eid = key.split(":")[0], idx = +key.split(":")[1], spirit = ofSpirit;
@@ -351,7 +434,7 @@
     api("sync").then(function (r) { toast(r.ok === false ? "ซิงก์ไม่สำเร็จ: " + r.error : r.busy ? "กำลังซิงก์อยู่แล้ว" : "ซิงก์แล้ว"); if (b) b.disabled = false; if (view === "office") officeData(); else load(); }).catch(function (e2) { toast(e2.message); if (b) b.disabled = false; });
   }
   if (window.visualViewport) {                                   // keep the chat sheet above the iPhone keyboard
-    var vv = window.visualViewport, kb = function () { var sh = $("ofSheet"); if (!sh) return; sh.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; sh.style.maxHeight = Math.max(260, Math.min(window.innerHeight * 0.78, vv.height - 16)) + "px"; };
+    var vv = window.visualViewport, kb = function () { var sh = $("ofSheet"); if (!sh) return; sh.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; sh.style.maxHeight = Math.max(280, Math.min(window.innerHeight * 0.86, vv.height - 10)) + "px"; };
     vv.addEventListener("resize", kb); vv.addEventListener("scroll", kb);
   }
   setInterval(function () { if (office && view === "office") office.setNight(isNight()); }, 60000);
@@ -364,6 +447,11 @@
     if (tab) { if (tab.dataset.v === view) return; view = tab.dataset.v; if (view === "office") renderOffice(); else { renderShell(); load(); } return; }
     if (t.closest("#ofScrim") || t.closest("#ofX")) { closeSheet(); return; }
     if (t.closest("#ofPend")) { view = "pending"; renderShell(); load(); return; }
+    var sp = t.closest("#ofStrip [data-sp]"); if (sp) { var cc = ofAssets.chars.filter(function (c) { return c.id === sp.dataset.sp; })[0]; if (cc && Office.BY[cc.id]) openSheet(Office.BY[cc.id], cc); return; }
+    if (t.closest("#menuBtn")) { $("ofMenu").hidden = false; $("mQrBox").hidden = true; return; }
+    if (t.closest("#mClose") || t.id === "ofMenu") { $("ofMenu").hidden = true; return; }
+    if (t.closest("#mQr")) { showQr(); return; }
+    if (t.closest("#askClose") || t.id === "ofAsk") { askStop(); return; }
     var qk = t.closest("#ofQuick [data-q]"); if (qk) { var q = qk.dataset.q; if (q === "sync") { closeSheet(); syncNow(); } else { closeSheet(); view = q; renderShell(); load(); } return; }
     var ai = t.closest("#ofChat [data-ai]"); if (ai) { runAction(ai.dataset.ai, ai); return; }
     var nav = t.closest("[data-nav]"); if (nav && !nav.disabled) { var nd = addDays(day, +nav.dataset.nav); if (nd <= todayStr()) { day = nd; load(); } return; }
@@ -374,9 +462,11 @@
     if (t.closest("#pinGo")) { submitPin(); return; }
     if (t.closest("#retry")) { load(); return; }
     if (t.closest("#cfgGo")) {
-      var u = $("cfgU").value.trim(), tk = $("cfgT").value.trim();
-      if (!URL_OK.test(u) || !TOKEN_OK.test(tk)) { renderSetup("URL หรือรหัสลับไม่ถูกต้อง"); return; }
-      verifyAndStart({ u: u, t: tk });
+      var link = $("cfgLink") ? $("cfgLink").value : "", c = parseSetup(link);
+      if (!c && $("cfgU") && ($("cfgU").value || $("cfgT").value)) { var u = $("cfgU").value.trim(), tk = $("cfgT").value.trim(); if (URL_OK.test(u) && TOKEN_OK.test(tk)) c = { u: u, t: tk, p: "" }; }
+      if (!c) { renderSetup("ลิงก์ไม่ถูกต้อง ลองคัดลอกจากเซลล์ A2 ให้ครบทั้งเส้น (หรือสแกน QR จากคอม)"); return; }
+      verifyAndStart(c);
+      return;
     }
   });
   document.addEventListener("input", function (e) {              // PIN boxes: digits only, move on / submit when 6 are typed

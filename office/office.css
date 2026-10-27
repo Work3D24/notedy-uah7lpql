@@ -35,3 +35,5 @@
 .of-lock .of-scroll{overflow:hidden}
 .of-lock .of-wrap{position:absolute;left:50%;top:50%;width:390px;transform:translate(-50%,-50%) scale(var(--s,1))}
 .of-lock .of-pin{position:absolute;inset:0}
+.of-fill{display:none;position:absolute;left:-40px;top:-40px;width:calc(100% + 80px);height:calc(100% + 80px);object-fit:cover;filter:blur(18px) brightness(.85);pointer-events:none}
+.of-lock .of-fill{display:block}
