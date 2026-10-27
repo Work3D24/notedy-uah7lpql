@@ -85,7 +85,7 @@
       e.style.setProperty('--d', '-' + (i * 0.37).toFixed(2) + 's');
       var bd = el('span', 'bd'); bd.style.display = 'none'; e.appendChild(bd);
       var nm = el('span', 'nm'); nm.textContent = asset.id; e.appendChild(nm);          /* English name, small */
-      if (asset.theme) { nm.style.background = asset.theme.bg; nm.style.color = asset.theme.fg; }   /* chip takes the spirit's own colour */
+      if (asset.theme) { nm.style.setProperty('--tb', asset.theme.bg); nm.style.setProperty('--tf', asset.theme.fg); nm.style.setProperty('--ts', /^#f{3,}/i.test(asset.theme.fg) ? '0 1px 2px rgba(0,0,0,.4)' : '0 1px 0 rgba(255,255,255,.55)'); }   /* liquid-glass chip tinted with the spirit's colour */
       if (!me.o.editor) e.addEventListener('click', function () { me.o.onTap && me.o.onTap(def, asset); });
     }
     var it = { key: key, kind: kind, e: e, im: im, asset: asset, P: P, def: def, bd: bd || null };
@@ -125,11 +125,20 @@
     (lock ? me.wrap : me.root).appendChild(me.pin);
     if (lock) {
       var rw = me.root.clientWidth || 390, rh = me.root.clientHeight || 844;
-      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', (rw / rh > 0.8 ? Math.min(rw / 390, rh / 844) : Math.max(rw / 390, rh / 844))); me.scroll.scrollTop = 0;   /* phones (portrait): cover = full screen, no borders · wide windows (PC): fit + blurred sides */
+      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', me._scale(rw, rh)); me.scroll.scrollTop = 0;   /* phones (portrait): cover = full screen, no borders · wide windows (PC): fit + blurred sides */
     } else { me.wrap.style.height = me.L.room.h + 'px'; me.wrap.style.removeProperty('--s'); }
   };
   Office.prototype.u = function (path) { return (this.o.base || '') + path; };      /* where the images live when the page is not next to them */
   Office.prototype.destroy = function () { this._dead = true; if (this.root) { this.root.innerHTML = ''; this.root.classList.remove('of', 'of-lock', 'of-ed'); } };
+  /* phones: cover the screen (no borders) but never crop an arranged spirit; wide windows: fit with blurred sides */
+  Office.prototype._scale = function (rw, rh) {
+    var cover = Math.max(rw / 390, rh / 844), fit = Math.min(rw / 390, rh / 844); if (rw / rh > 0.8) return fit;
+    var top = 1e9, bottom = -1e9, me = this;
+    this.A.chars.forEach(function (c) { var P = me.L.chars[c.id]; if (!P || P.hide) return; var h = P.w * (c.h / c.w); top = Math.min(top, P.y - h); bottom = Math.max(bottom, P.y); });
+    if (top > bottom) return cover;
+    var allowed = rh / (2 * Math.max(422 - top + 16, bottom - 422 + 24));
+    return Math.max(fit, Math.min(cover, allowed));
+  };
   Office.prototype.setNight = function (n) { this.night = !!n; this.refresh(); };
   Office.prototype.setBadges = function (b) { this.badges = b || {}; this.refresh(); };
   Office.prototype.select = function (key) {

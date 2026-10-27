@@ -12,7 +12,9 @@
 .of-char img{scale:var(--fx,1) 1;filter:drop-shadow(0 6px 5px #3a1c0a55);transform-origin:50% 100%;will-change:transform;animation:ofbreath var(--bs,4.2s) ease-in-out infinite;animation-delay:var(--d,0s)}
 .of-deco img{scale:var(--fx,1) 1}
 .of-char:active img{filter:drop-shadow(0 3px 3px #3a1c0a55) brightness(1.04)}
-.of-it .nm{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-weight:700;font-size:calc(var(--w,110px) * .078);line-height:1;font-family:inherit;letter-spacing:.2px;color:var(--ink);background:var(--glass);border:1px solid #ffffffd9;border-radius:99px;padding:.22em .7em;box-shadow:0 1px 3px #0003}
+.of-it .nm{--tb:#fff9ef;--tf:#5b3a24;--ts:none;position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-weight:700;font-size:calc(var(--w,110px) * .078);line-height:1;font-family:inherit;letter-spacing:.2px;color:var(--tf);text-shadow:var(--ts);padding:.26em .8em;border-radius:99px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--tb) 58%,rgba(255,255,255,.5)) 0%,color-mix(in srgb,var(--tb) 34%,rgba(255,255,255,.12)) 100%);-webkit-backdrop-filter:blur(8px) saturate(1.7);backdrop-filter:blur(8px) saturate(1.7);
+  border:1px solid rgba(255,255,255,.62);box-shadow:inset 0 1px 1.5px rgba(255,255,255,.85),inset 0 -1px 2px rgba(0,0,0,.14),0 3px 8px rgba(30,20,60,.3)}
 .of-it .bd{position:absolute;right:4%;top:2%;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#e46a78;color:#fff;font:800 11px/16px inherit;font-family:inherit;border:2px solid #fff;box-shadow:0 2px 4px #0004}
 .of-it.hid{display:none}
 /* breathing: the feet stay pinned, the body stretches a hair vertically (--br = amount, set from layout.fx) */
