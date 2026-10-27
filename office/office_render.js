@@ -125,7 +125,7 @@
     (lock ? me.wrap : me.root).appendChild(me.pin);
     if (lock) {
       var rw = me.root.clientWidth || 390, rh = me.root.clientHeight || 844;
-      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', Math.max(rw / 390, rh / 844)); me.scroll.scrollTop = 0;   /* cover: full screen, no borders (spirits sit well inside the visible band) */
+      me.wrap.style.height = '844px'; me.wrap.style.setProperty('--s', (rw / rh > 0.8 ? Math.min(rw / 390, rh / 844) : Math.max(rw / 390, rh / 844))); me.scroll.scrollTop = 0;   /* phones (portrait): cover = full screen, no borders · wide windows (PC): fit + blurred sides */
     } else { me.wrap.style.height = me.L.room.h + 'px'; me.wrap.style.removeProperty('--s'); }
   };
   Office.prototype.u = function (path) { return (this.o.base || '') + path; };      /* where the images live when the page is not next to them */
