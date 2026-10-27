@@ -1,0 +1,37 @@
+/* Notedy office room: shared by the app page and the layout editor. The room scrolls; the BG is part of it. */
+.of{position:absolute;inset:0;overflow:hidden;background:#2a1a10;--ink:#5b3a24;--glass:rgba(255,249,239,.8)}
+.of-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain}
+.of-scroll::-webkit-scrollbar{display:none}
+.of-wrap{position:relative;width:100%;overflow:hidden}
+.of-bg{position:absolute;max-width:none;display:block;transform:translateX(-50%);user-select:none;-webkit-user-drag:none}
+.of-layer,.of-pin{position:absolute;inset:0;pointer-events:none}
+.of-pin{overflow:hidden}
+.of-it{position:absolute;margin:0;padding:0;border:0;background:none;text-align:center;font-family:inherit}
+.of-it img{width:100%;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.of-char{pointer-events:auto;cursor:pointer}
+.of-char img{scale:var(--fx,1) 1;filter:drop-shadow(0 6px 5px #3a1c0a55);transform-origin:50% 100%;will-change:transform;animation:ofbreath var(--bs,4.2s) ease-in-out infinite;animation-delay:var(--d,0s)}
+.of-deco img{scale:var(--fx,1) 1}
+.of-char:active img{filter:drop-shadow(0 3px 3px #3a1c0a55) brightness(1.04)}
+.of-it .nm{border:1.5px solid #fffd;position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);white-space:nowrap;font:700 10px/1 inherit;font-family:inherit;color:var(--ink);background:var(--glass);border-radius:9px;padding:3px 7px;box-shadow:0 1px 3px #0003}
+.of-it .bd{position:absolute;right:4%;top:2%;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#e46a78;color:#fff;font:800 11px/16px inherit;font-family:inherit;border:2px solid #fff;box-shadow:0 2px 4px #0004}
+.of-it.hid{display:none}
+/* breathing: the feet stay pinned, the body stretches a hair vertically (--br = amount, set from layout.fx) */
+@keyframes ofbreath{0%,100%{transform:scale(1,1)}50%{transform:scale(calc(1 - var(--br,.02)*.2),calc(1 + var(--br,.02)))}}
+.nobreath .of-char img{animation:none}
+.of-fx{position:absolute;left:0;top:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.of-char img{animation:none}}
+
+/* editor: everything is draggable, hidden items stay visible but faint */
+.of-ed .of-it{pointer-events:auto;cursor:grab;touch-action:none}
+.of-ed .of-it.hid{display:block;opacity:.28}
+.of-ed .of-char img{animation:none}
+.of-ed.fxsel .of-char img{animation:ofbreath var(--bs,4.2s) ease-in-out infinite;animation-delay:var(--d,0s)}   /* preview breathing while tuning it */
+.of-ed.fxsel.nobreath .of-char img{animation:none}
+.of-ed .of-it.sel{outline:2px dashed #e46a78;outline-offset:3px}
+.of-ed .of-it.sel .nm{border-color:#e46a78}
+.of-ed.bgsel .of-bg{outline:3px dashed #e46a78;outline-offset:-3px}
+
+/* locked room: no scrolling, fixed 390x844 design box scaled to cover the screen */
+.of-lock .of-scroll{overflow:hidden}
+.of-lock .of-wrap{position:absolute;left:50%;top:50%;width:390px;transform:translate(-50%,-50%) scale(var(--s,1))}
+.of-lock .of-pin{position:absolute;inset:0}

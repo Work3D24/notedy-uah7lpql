@@ -9,7 +9,7 @@
   var PIN_CODES = { pin_wrong: 1, pin_required: 1, pin_setup: 1, locked: 1 };
   var MON = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
   var WEEK = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
-  var cfg = null, view = "day", day = null, status = {}, busy = false, groupsMap = {}, bulk = { armed: false, t: null, last: null };
+  var cfg = null, view = "office", office = null, ofLoad = null, ofAssets = null, ofLayout = null, ofBadges = {}, ofToday = null, ofSpirit = null, chatBusy = false, ofActs = {}, day = null, status = {}, busy = false, groupsMap = {}, bulk = { armed: false, t: null, last: null };
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function toast(t) { var e = $("toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(function () { e.classList.remove("on"); }, 2600); }
@@ -27,8 +27,8 @@
   }
 
   /* ---------- API ---------- */
-  function api(action, payload) {
-    var body = Object.assign({ token: cfg.t, pin: cfg.p || undefined, action: action }, payload || {}), ctrl = new AbortController(), to = setTimeout(function () { ctrl.abort(); }, 45000);
+  function api(action, payload, ms) {
+    var body = Object.assign({ token: cfg.t, pin: cfg.p || undefined, action: action }, payload || {}), ctrl = new AbortController(), to = setTimeout(function () { ctrl.abort(); }, ms || 45000);
     return fetch(cfg.u, { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "text/plain;charset=utf-8" }, signal: ctrl.signal })
       .then(function (r) { return r.json(); })
       .then(function (j) {
@@ -134,10 +134,15 @@
     var tab = document.querySelector('.tabs [data-v="pending"]'); if (tab) tab.textContent = "📥 ค้างตรวจ" + (status.pending ? " (" + status.pending + ")" : "");
     var bn = $("banner"); if (bn) { bn.hidden = !status.error; bn.textContent = status.error ? "ซิงก์ Drive ผิดพลาด: " + status.error : ""; }
   }
+  function showApp() {                                          // leave the office room: the classic (scrolling) pages use #app
+    if (office) { office.destroy(); office = null; }
+    document.body.classList.remove("inOffice"); var o = $("office"); if (o) { o.hidden = true; o.innerHTML = ""; o.classList.remove("open"); } $("app").hidden = false;
+  }
   function renderShell() {
+    showApp();
     $("app").innerHTML = '<div class="top"><img src="assets/Notedy.png" alt=""><div class="ttl"><b>Notedy</b><small id="subline">กำลังโหลด…</small></div><button class="ibtn" id="syncBtn" title="ซิงก์ Drive ตอนนี้" aria-label="ซิงก์ Drive ตอนนี้">🔄</button><button class="ibtn" id="lockBtn" title="ล็อกแอป" aria-label="ล็อกแอป">🔒</button><button class="ibtn" id="cfgBtn" title="ตั้งค่า" aria-label="ตั้งค่า">⚙</button></div>' +
       '<div class="banner" id="banner" hidden></div>' +
-      '<div class="tabs"><button data-v="day" class="' + (view === "day" ? "on" : "") + '">📒 โน้ตรายวัน</button><button data-v="pending" class="' + (view === "pending" ? "on" : "") + '">📥 ค้างตรวจ</button></div>' +
+      '<div class="tabs"><button data-v="office">🏡 ห้อง</button><button data-v="day" class="' + (view === "day" ? "on" : "") + '">📒 โน้ตรายวัน</button><button data-v="pending" class="' + (view === "pending" ? "on" : "") + '">📥 ค้างตรวจ</button></div>' +
       '<div id="content"><div class="noteEmpty">กำลังโหลด…</div></div><div class="noteBulk" id="noteBulk" hidden></div>';
   }
   function dayHtml(d) {
@@ -164,7 +169,7 @@
       (groups.length ? groups.slice(0, 120).map(function (g) { return groupCard(g, true); }).join("") + (groups.length > 120 ? '<div class="noteEmpty">…และอีก ' + (groups.length - 120) + " รายการ (ตัดสินชุดนี้ก่อนแล้วโหลดใหม่)</div>" : "") : '<div class="noteEmpty">ไม่มีอะไรค้างตรวจ 🎉</div>') + "</div>";
   }
   function load(keepScroll) {
-    if (busy) return Promise.resolve();
+    if (busy || view === "office") return Promise.resolve();
     busy = true; var sc = keepScroll ? window.scrollY : 0;
     var job = view === "day" ? Promise.all([api("daily", { date: day }), api("status")]) : Promise.all([api("inbox"), Promise.resolve(null)]);
     return job.then(function (r) {
@@ -180,6 +185,7 @@
   }
 
   function renderSetup(msg) {
+    showApp();
     $("app").innerHTML = '<div class="top"><img src="assets/Notedy.png" alt=""><div class="ttl"><b>Notedy</b><small>ตั้งค่าครั้งแรก</small></div></div>' +
       '<div class="setup"><h2>เชื่อมกับ Google ของคุณ</h2>' + (msg ? '<div class="banner">' + esc(msg) + "</div>" : "") +
       '<ol><li>เปิด Google Sheet "Notedy Cloud" ของคุณ แล้วไปแท็บ <b>setup</b></li><li>แตะลิงก์ในเซลล์ A2 (ลิงก์ตั้งค่า) บนเครื่องนี้ หรือกรอกด้านล่างเอง</li></ol>' +
@@ -188,6 +194,7 @@
       '<button class="setup go" id="cfgGo" type="button">เชื่อมต่อ</button></div>';
   }
   function renderPin(create, msg) {
+    showApp();
     var top = '<div class="top"><img src="assets/Notedy.png" alt=""><div class="ttl"><b>Notedy</b><small>' + (create ? "ตั้งรหัสเข้าแอป" : "ใส่รหัสเข้าแอป") + "</small></div></div>";
     $("app").innerHTML = top + '<div class="setup pinbox"><h2>' + (create ? "ตั้งรหัส 6 หลัก" : "ใส่รหัส 6 หลัก") + "</h2>" + (msg ? '<div class="banner">' + esc(msg) + "</div>" : "") +
       '<p class="muted">' + (create ? "ใช้เข้าแอปนี้ ตั้งครั้งเดียว เครื่องนี้จะจำไว้ให้ ไม่ต้องกรอกอีก (เครื่องใหม่ต้องกรอกรหัสนี้)" : "ใส่รหัสที่ตั้งไว้ เครื่องนี้จะจำไว้หลังกรอกถูก") + "</p>" +
@@ -218,7 +225,7 @@
   function start() {
     if (!cfg) { renderSetup(); return; }
     if (!cfg.p) { gatePin(); return; }
-    renderShell(); load();
+    if (view === "office") renderOffice(); else { renderShell(); load(); }
   }
   function verifyAndStart(c) {
     cfg = c;
@@ -226,18 +233,142 @@
       .catch(function (e) { cfg = null; renderSetup(e.message); });
   }
 
+
+  /* ---------- office room (home) + chat with the spirits ---------- */
+  var QUICK = { Notedy: [["day", "📒 เปิดโน้ตรายวัน"]], Minty: [["pending", "📥 ไปตรวจไฟล์"]], Drivey: [["sync", "🔄 ซิงก์ Drive ตอนนี้"]] };
+  function isNight() { var h = parseInt(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date()), 10); return h >= 18 || h < 6; }
+  function authFail(e) {                                         // PIN changed / reset elsewhere or token revoked
+    if (e.code && PIN_CODES[e.code]) { cfg.p = ""; saveCfg(cfg); gatePin(e.code === "pin_setup" ? "" : e.message); return true; }
+    if (e.code === "unauthorized") { cfg = null; try { localStorage.removeItem(CFG_KEY); } catch (e2) {} renderSetup(e.message); return true; }
+    return false;
+  }
+  function loadOfficeAssets() {
+    if (!ofLoad) ofLoad = Promise.all([fetch("office/assets.json").then(function (r) { return r.json(); }), fetch("office/layout.json").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })])
+      .then(function (r) { ofAssets = r[0]; ofLayout = r[1]; }).catch(function (e) { ofLoad = null; throw e; });
+    return ofLoad;
+  }
+  function renderOffice() {
+    document.body.classList.add("inOffice"); $("app").hidden = true; $("app").innerHTML = "";
+    var o = $("office"); if (!o) { o = document.createElement("div"); o.id = "office"; document.body.insertBefore(o, $("toast")); }
+    o.hidden = false; o.classList.remove("open");
+    o.innerHTML = '<div id="ofStage"></div><div class="ofTop"><div class="ttl"><b>Notedy</b><small id="ofSub">กำลังโหลด…</small></div><button class="pill" id="ofPend" type="button">📥 ค้างตรวจ</button>' +
+      '<button class="ico" id="syncBtn" type="button" aria-label="ซิงก์ Drive ตอนนี้">🔄</button><button class="ico" id="lockBtn" type="button" aria-label="ล็อกแอป">🔒</button></div>' +
+      '<div class="ofTabs"><button class="on" data-v="office" type="button"><b>🏡</b>ห้อง</button><button data-v="pending" type="button"><b>📥</b>ค้างตรวจ</button><button data-v="day" type="button"><b>📒</b>โน้ต</button></div>' +
+      '<div id="ofScrim"></div><div id="ofSheet" role="dialog" aria-modal="true"><div class="grab"></div><div class="hd"><img id="ofImg" alt=""><div><h2 id="ofNm"></h2><div class="rl" id="ofRl"></div></div><button class="x" id="ofX" type="button" aria-label="ปิด">✕</button></div>' +
+      '<div id="ofChat"></div><div class="ofQuick" id="ofQuick"></div><form id="ofForm" autocomplete="off"><input id="ofIn" maxlength="500" placeholder="พิมพ์คุยกับภูติ…" enterkeyhint="send"><button id="ofSend" type="submit">ส่ง</button></form></div>';
+    loadOfficeAssets().then(function () {
+      if (view !== "office" || office) return;
+      office = new Office($("ofStage"), { base: "office/", onTap: openSheet }); office.load(ofAssets, ofLayout, isNight()); office.setBadges(ofBadges);
+    }).catch(function () { toast("โหลดภาพห้องไม่สำเร็จ ลองเปิดใหม่"); });
+    officeData();
+  }
+  function headerOffice() {
+    var sub = $("ofSub"); if (!sub) return;
+    sub.textContent = (status.last_success ? "ซิงก์ล่าสุด " + hhmm(status.last_success) : "ยังไม่เคยซิงก์") + (status.pending != null ? " · รอตรวจ " + status.pending + " ไฟล์" : "");
+    var pb = $("ofPend"); if (pb) pb.textContent = "📥 ค้างตรวจ" + (status.pending ? " " + status.pending : "");
+  }
+  function officeData() {
+    return Promise.all([api("status"), api("daily", { date: todayStr() })]).then(function (r) {
+      status = r[0]; var gs = groupFiles(r[1].files || []);
+      ofToday = { groups: gs.length, files: r[1].files_total || 0, pending: gs.filter(function (g) { return groupDecision(g) === "pending"; }).length };
+      ofBadges = { Minty: status.pending || 0, Notedy: ofToday.pending };
+      if (office) office.setBadges(ofBadges); headerOffice();
+    }).catch(function (e) { if (!authFail(e)) { var sub = $("ofSub"); if (sub) sub.textContent = e.message; } });
+  }
+  function sayFor(def) {
+    if (def.id === "Notedy" && ofToday) return "วันนี้ไฟล์เปลี่ยน " + ofToday.files + " ไฟล์ใน " + ofToday.groups + " แฟ้ม" + (ofToday.pending ? " ยังไม่ได้ตัดสิน " + ofToday.pending + " แฟ้ม" : " ตัดสินครบแล้ว 🎉") + " ฝากถามอะไรก็ได้นะคะ";
+    if (def.id === "Minty" && status.pending != null) return "มีไฟล์รอตรวจ " + status.pending + " ไฟล์ ช่วยกันดูนะ 🍀";
+    return def.say;
+  }
+  function bubble(cls, text) { var d = document.createElement("div"); d.className = "m " + cls; d.textContent = text; $("ofChat").appendChild(d); return d; }
+  function bubbleActs(entryId, actions, done) {
+    if (!actions || !actions.length) return;
+    var w = document.createElement("div"); w.className = "acts";
+    actions.forEach(function (a, i) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = actLabel(a); b.dataset.ai = entryId + ":" + i; ofActs[entryId + ":" + i] = a;
+      if ((done || []).indexOf(i) >= 0) { b.className = "done"; b.disabled = true; }
+      w.appendChild(b);
+    });
+    $("ofChat").appendChild(w);
+  }
+  function actLabel(a) {
+    return a.type === "open_pending" ? "📥 ไปหน้าค้างตรวจ" : a.type === "open_day" ? "📒 เปิดโน้ต " + (a.date ? shortDate(a.date) : "วันนี้") : a.type === "sync" ? "🔄 ซิงก์ Drive ตอนนี้"
+      : a.type === "decide_folder" ? "✓ ตั้ง “" + a.folder + "” เป็น" + (a.decision === "work" ? "งาน" : "ไม่ใช่งาน") : a.type;
+  }
+  function renderEntries(entries) {
+    var box = $("ofChat"); box.innerHTML = "";
+    var show = (entries || []).filter(function (e) { return e.role === "user" || e.role === "model" || e.role === "ask_out" || e.role === "ask_answer"; }).slice(-24);
+    show.forEach(function (e) {
+      if (e.role === "user") bubble("me", e.text);
+      else if (e.role === "model") { bubble("sp", e.text); bubbleActs(e.id, e.actions, e.done); }
+      else if (e.role === "ask_out") bubble("note", "↪ ถาม" + peerName(e.peer) + ": " + e.text);
+      else bubble("note", "↩ " + peerName(e.peer) + " ตอบ: " + e.text);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+  function peerName(id) { var r = Office.BY[id]; return r ? r.th : "เพื่อนภูติ"; }
+  function openSheet(def, asset) {
+    ofSpirit = def.id; var th = asset.theme || { bg: "#3f9a6b", fg: "#fff" }, sh = $("ofSheet");
+    sh.style.setProperty("--tc", th.bg); sh.style.setProperty("--tx", th.fg);
+    $("ofImg").src = office.u(office.night ? asset.night : asset.day); $("ofNm").textContent = def.th; $("ofRl").textContent = def.role;
+    $("ofChat").innerHTML = ""; bubble("sp", sayFor(def));
+    $("ofQuick").innerHTML = (QUICK[def.id] || []).map(function (q) { return '<button type="button" data-q="' + q[0] + '">' + q[1] + "</button>"; }).join("");
+    $("ofIn").placeholder = "คุยกับ" + def.th + "…"; $("office").classList.add("open");
+    var me = def.id;
+    api("chat_log", { spirit: def.id }).then(function (r) { if (ofSpirit === me && $("ofChat") && r.entries && r.entries.length) renderEntries(r.entries); })
+      .catch(function (e) { if (ofSpirit === me && !authFail(e) && $("ofChat")) bubble("note", /unknown action/.test(e.message) ? "ระบบแชทยังไม่เปิดใช้ (อัปเดตสคริปต์ก่อน)" : e.message); });
+  }
+  function closeSheet() { var o = $("office"); if (o) o.classList.remove("open"); ofSpirit = null; try { document.activeElement.blur(); } catch (e) {} }
+  function sendChat() {
+    var inp = $("ofIn"), msg = (inp.value || "").trim(); if (!msg || chatBusy || !ofSpirit) return;
+    chatBusy = true; inp.value = ""; $("ofSend").disabled = true; var me = ofSpirit; bubble("me", msg); var wait = bubble("note", "กำลังคิด… (ตอบครั้งแรกอาจช้านิดนึง)"); $("ofChat").scrollTop = 1e6;
+    api("chat", { spirit: me, message: msg }, 110000).then(function (r) {
+      if (ofSpirit !== me) return; wait.remove();
+      (r.asked || []).forEach(function (id) { bubble("note", "↪ ถาม" + peerName(id) + " แล้ว"); });
+      bubble("sp", r.reply); bubbleActs(r.id || "x" + Date.now(), r.actions, []);
+    }).catch(function (e) {
+      if (authFail(e)) return; if (ofSpirit !== me) return; wait.remove();
+      var d = bubble("err", /GEMINI_KEY|ยังไม่ได้ใส่/.test(e.message) ? "ยังไม่ได้ใส่ Gemini API key ในสคริปต์ (ดูวิธีใน README)" : e.message);
+    }).then(function () { chatBusy = false; var b = $("ofSend"); if (b) b.disabled = false; var c = $("ofChat"); if (c) c.scrollTop = c.scrollHeight; });
+  }
+  function runAction(key, btn) {
+    var a = ofActs[key]; if (!a) return; var eid = key.split(":")[0], idx = +key.split(":")[1], spirit = ofSpirit;
+    function done() { btn.classList.add("done"); btn.disabled = true; api("chat_done", { spirit: spirit, id: eid, index: idx }).catch(function () {}); }
+    if (a.type === "open_pending") { done(); closeSheet(); view = "pending"; renderShell(); load(); }
+    else if (a.type === "open_day") { done(); closeSheet(); day = /^\d{4}-\d{2}-\d{2}$/.test(a.date || "") && a.date <= todayStr() ? a.date : todayStr(); view = "day"; renderShell(); load(); }
+    else if (a.type === "sync") { done(); syncNow(); }
+    else if (a.type === "decide_folder") {
+      btn.disabled = true;
+      api("inbox").then(function (r) {
+        var items = (r.items || []).filter(function (f) { return f.folder_name === a.folder && f.decision === "pending"; }).map(function (f) { return { file_id: f.id, version: f.version }; });
+        if (!items.length) { toast("ไม่พบไฟล์ค้างในแฟ้ม “" + a.folder + "”"); btn.disabled = false; return; }
+        return decide(items, a.decision).then(function (d) { toast("ตั้งแล้ว " + d.done.length + " ไฟล์"); done(); officeData(); });
+      }).catch(function (e) { toast(e.message); btn.disabled = false; });
+    }
+  }
+  function syncNow() {
+    var b = $("syncBtn"); if (b) b.disabled = true; toast("กำลังซิงก์ Drive…");
+    api("sync").then(function (r) { toast(r.ok === false ? "ซิงก์ไม่สำเร็จ: " + r.error : r.busy ? "กำลังซิงก์อยู่แล้ว" : "ซิงก์แล้ว"); if (b) b.disabled = false; if (view === "office") officeData(); else load(); }).catch(function (e2) { toast(e2.message); if (b) b.disabled = false; });
+  }
+  if (window.visualViewport) {                                   // keep the chat sheet above the iPhone keyboard
+    var vv = window.visualViewport, kb = function () { var sh = $("ofSheet"); if (!sh) return; sh.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; sh.style.maxHeight = Math.max(260, Math.min(window.innerHeight * 0.78, vv.height - 16)) + "px"; };
+    vv.addEventListener("resize", kb); vv.addEventListener("scroll", kb);
+  }
+  setInterval(function () { if (office && view === "office") office.setNight(isNight()); }, 60000);
+
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
     var t = e.target;
     if (!t.closest) return;
-    var tab = t.closest(".tabs [data-v]"); if (tab) { view = tab.dataset.v; renderShell(); load(); return; }
+    var tab = t.closest(".tabs [data-v], .ofTabs [data-v]");
+    if (tab) { if (tab.dataset.v === view) return; view = tab.dataset.v; if (view === "office") renderOffice(); else { renderShell(); load(); } return; }
+    if (t.closest("#ofScrim") || t.closest("#ofX")) { closeSheet(); return; }
+    if (t.closest("#ofPend")) { view = "pending"; renderShell(); load(); return; }
+    var qk = t.closest("#ofQuick [data-q]"); if (qk) { var q = qk.dataset.q; if (q === "sync") { closeSheet(); syncNow(); } else { closeSheet(); view = q; renderShell(); load(); } return; }
+    var ai = t.closest("#ofChat [data-ai]"); if (ai) { runAction(ai.dataset.ai, ai); return; }
     var nav = t.closest("[data-nav]"); if (nav && !nav.disabled) { var nd = addDays(day, +nav.dataset.nav); if (nd <= todayStr()) { day = nd; load(); } return; }
     var act = t.closest("[data-nd]"); if (act) { onAction(act.dataset.nd, act); return; }
-    if (t.closest("#syncBtn")) {
-      var b = $("syncBtn"); b.disabled = true; toast("กำลังซิงก์ Drive…");
-      api("sync").then(function (r) { toast(r.ok === false ? "ซิงก์ไม่สำเร็จ: " + r.error : r.busy ? "กำลังซิงก์อยู่แล้ว" : "ซิงก์แล้ว"); b.disabled = false; load(); }).catch(function (e2) { toast(e2.message); b.disabled = false; });
-      return;
-    }
+    if (t.closest("#syncBtn")) { syncNow(); return; }
     if (t.closest("#cfgBtn")) { if (confirm("ล้างการตั้งค่าบนเครื่องนี้และตั้งค่าใหม่?")) { try { localStorage.removeItem(CFG_KEY); } catch (e3) {} cfg = null; renderSetup(); } return; }
     if (t.closest("#lockBtn")) { cfg.p = ""; saveCfg(cfg); toast("ล็อกแล้ว"); gatePin(); return; }
     if (t.closest("#pinGo")) { submitPin(); return; }
@@ -254,8 +385,9 @@
     if (t.value.length < 6) return;
     if ($("app").dataset.pin === "create") { if (t.id === "pinA") $("pinB").focus(); else submitPin(); } else submitPin();
   });
+  document.addEventListener("submit", function (e) { if (e.target && e.target.id === "ofForm") { e.preventDefault(); sendChat(); } });
   document.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target && (e.target.id === "pinA" || e.target.id === "pinB")) submitPin(); });
-  document.addEventListener("visibilitychange", function () { if (!document.hidden && cfg && cfg.p && !busy) load(true); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden || !cfg || !cfg.p) return; if (view === "office") { if (office) office.setNight(isNight()); officeData(); } else if (!busy) load(true); });
 
   /* ---------- boot ---------- */
   day = todayStr();

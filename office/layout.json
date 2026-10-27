@@ -1,0 +1,128 @@
+{
+ "v": 2,
+ "room": {
+  "h": 1480,
+  "lock": true
+ },
+ "bg": {
+  "w": 420,
+  "x": 50,
+  "y": -40
+ },
+ "chars": {
+  "Notedy": {
+   "flip": false,
+   "hide": false,
+   "x": 45.5,
+   "y": 325,
+   "w": 108
+  },
+  "Newnew": {
+   "flip": false,
+   "hide": false,
+   "x": 50.5,
+   "y": 581,
+   "w": 104
+  },
+  "Backy": {
+   "flip": false,
+   "hide": false,
+   "x": 17.1,
+   "y": 587,
+   "w": 132
+  },
+  "Minty": {
+   "flip": false,
+   "hide": false,
+   "x": 64.1,
+   "y": 450,
+   "w": 102
+  },
+  "Drivey": {
+   "flip": false,
+   "hide": false,
+   "x": 36.3,
+   "y": 448,
+   "w": 104
+  },
+  "Clouddy": {
+   "flip": false,
+   "hide": false,
+   "x": 81.8,
+   "y": 720,
+   "w": 118
+  },
+  "Linky": {
+   "flip": false,
+   "hide": false,
+   "x": 82.8,
+   "y": 584,
+   "w": 110
+  },
+  "Sunny": {
+   "flip": true,
+   "hide": false,
+   "x": 50.5,
+   "y": 698,
+   "w": 104
+  },
+  "Searchy": {
+   "flip": false,
+   "hide": false,
+   "x": 11,
+   "y": 448,
+   "w": 102
+  },
+  "Drawy": {
+   "flip": false,
+   "hide": false,
+   "x": 91.4,
+   "y": 334,
+   "w": 78
+  },
+  "Planly": {
+   "flip": true,
+   "hide": false,
+   "x": 87.9,
+   "y": 452,
+   "w": 110
+  },
+  "Buddy": {
+   "flip": false,
+   "hide": false,
+   "x": 16,
+   "y": 724,
+   "w": 158
+  }
+ },
+ "decos": [
+  {
+   "x": 49,
+   "y": 1,
+   "w": 448,
+   "layer": "pin",
+   "flip": false,
+   "hide": false,
+   "id": "d1",
+   "asset": "daisy-corner-floral-clusters"
+  }
+ ],
+ "fx": {
+  "on": true,
+  "count": 30,
+  "min": 0.6,
+  "max": 2.2,
+  "speed": 5,
+  "rise": 1,
+  "drift": 18,
+  "twinkle": 1.2,
+  "alpha": 0.95,
+  "sparkle": 0,
+  "glow": 4.5,
+  "layer": "front",
+  "colorDay": "#a9e9fe",
+  "colorNight": "#ffeb66",
+  "breath": 2.7,
+  "breathSpeed": 3.9
+ }
+}

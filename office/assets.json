@@ -1,0 +1,179 @@
+{
+ "built": "2026-10-28 04:05:47",
+ "chars": [
+  {
+   "id": "Notedy",
+   "day": "img/chars/Notedy.webp",
+   "night": "img/chars/Notedy_night.webp",
+   "w": 640,
+   "h": 665,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#3960d0",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Newnew",
+   "day": "img/chars/Newnew.webp",
+   "night": "img/chars/Newnew_night.webp",
+   "w": 640,
+   "h": 702,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#395fd0",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Backy",
+   "day": "img/chars/Backy.webp",
+   "night": "img/chars/Backy_night.webp",
+   "w": 640,
+   "h": 616,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#171f63",
+    "fg": "#ffe9a8"
+   }
+  },
+  {
+   "id": "Minty",
+   "day": "img/chars/Minty.webp",
+   "night": "img/chars/Minty_night.webp",
+   "w": 640,
+   "h": 696,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#669523",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Drivey",
+   "day": "img/chars/Drivey.webp",
+   "night": "img/chars/Drivey_night.webp",
+   "w": 640,
+   "h": 647,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#3976d0",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Clouddy",
+   "day": "img/chars/Clouddy.webp",
+   "night": "img/chars/Clouddy_night.webp",
+   "w": 640,
+   "h": 630,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#d03973",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Linky",
+   "day": "img/chars/Linky.webp",
+   "night": "img/chars/Linky_night.webp",
+   "w": 640,
+   "h": 587,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#3962d0",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Sunny",
+   "day": "img/chars/Sunny.webp",
+   "night": "img/chars/Sunny_night.webp",
+   "w": 640,
+   "h": 669,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#dabd62",
+    "fg": "#4a3410"
+   }
+  },
+  {
+   "id": "Searchy",
+   "day": "img/chars/Searchy.webp",
+   "night": "img/chars/Searchy_night.webp",
+   "w": 640,
+   "h": 693,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#d07839",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Drawy",
+   "day": "img/chars/Drawy.webp",
+   "night": "img/chars/Drawy_night.webp",
+   "w": 640,
+   "h": 618,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#d03961",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Planly",
+   "day": "img/chars/Planly.webp",
+   "night": "img/chars/Planly_night.webp",
+   "w": 640,
+   "h": 637,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#3948d0",
+    "fg": "#ffffff"
+   }
+  },
+  {
+   "id": "Buddy",
+   "day": "img/chars/Buddy.webp",
+   "night": "img/chars/Buddy_night.webp",
+   "w": 640,
+   "h": 517,
+   "placeholder": false,
+   "hasNight": true,
+   "theme": {
+    "bg": "#3960d0",
+    "fg": "#ffffff"
+   }
+  }
+ ],
+ "decos": [
+  {
+   "id": "daisy-corner-floral-clusters",
+   "name": "Daisy Corner Floral Clusters",
+   "day": "img/decos/daisy-corner-floral-clusters.webp",
+   "night": "img/decos/daisy-corner-floral-clusters_night.webp",
+   "w": 1024,
+   "h": 368
+  }
+ ],
+ "bg": {
+  "day": "img/bg_day.jpg",
+  "w": 1170,
+  "h": 2532,
+  "day_src": "BG Phone Day02.jpg",
+  "night": "img/bg_night.jpg",
+  "night_src": "BG Phone Night02.jpg"
+ }
+}

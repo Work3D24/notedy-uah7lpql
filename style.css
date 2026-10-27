@@ -93,3 +93,43 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:#2a2547;color:#fff;padding:10px 18px;border-radius:99px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:99;max-width:90vw;text-align:center}
 #toast.on{opacity:1}
+
+/* ---------- office room (home screen) ---------- */
+body.inOffice{overflow:hidden;position:fixed;inset:0;width:100%;background:#2a1a10}
+#office{position:fixed;inset:0;z-index:5;overflow:hidden;background:#2a1a10;--cream:#fff9ef;--cream2:#ffeccc;--pink:#e46a78;--glass:rgba(255,249,239,.8)}
+#ofStage{position:absolute;inset:0}
+.ofTop,.ofTabs{position:absolute;z-index:30;left:12px;right:12px;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1.5px solid #fff9}
+.ofTop{top:calc(env(safe-area-inset-top,0px) + 8px);height:48px;border-radius:24px;display:flex;align-items:center;gap:6px;padding:0 6px 0 16px;box-shadow:0 4px 14px #5b3a2429}
+.ofTop .ttl{flex:1;min-width:0;line-height:1.1}.ofTop .ttl b{font-size:15px;display:block}.ofTop .ttl small{display:block;font-size:10.5px;color:#8a6a4f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ofTop .pill{border:0;border-radius:18px;padding:8px 11px;font-weight:800;font-size:12.5px;color:#fff;background:var(--pink);box-shadow:0 2px 0 #b94a58;white-space:nowrap}
+.ofTop .ico{width:34px;height:34px;border-radius:50%;border:0;background:#fff;font-size:16px;box-shadow:0 2px 0 #d9c3a1;padding:0}
+.ofTop .ico:disabled{opacity:.5}
+.ofTabs{bottom:calc(env(safe-area-inset-bottom,0px) + 6px);height:62px;border-radius:31px;display:flex;justify-content:space-around;align-items:center;box-shadow:0 6px 18px #5b3a2440}
+.ofTabs button{border:0;background:none;color:#8a6a4f;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:1px;width:84px;height:50px;border-radius:25px;justify-content:center}
+.ofTabs button b{font-size:20px;line-height:1}
+.ofTabs button.on{background:var(--cream2);color:#5b3a24}
+#ofScrim{position:absolute;z-index:40;inset:0;background:#2a140066;opacity:0;pointer-events:none;transition:opacity .25s}
+#ofSheet{position:absolute;z-index:41;left:0;right:0;bottom:0;max-height:78dvh;display:flex;flex-direction:column;background:var(--cream);border-radius:28px 28px 0 0;padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 12px);transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.9,.3,1);box-shadow:0 -8px 30px #0006;color:#5b3a24}
+#office.open #ofScrim{opacity:1;pointer-events:auto}#office.open #ofSheet{transform:none}
+#ofSheet .grab{width:42px;height:5px;border-radius:3px;background:#d9c3a1;margin:0 auto 8px;flex:none}
+#ofSheet .hd{display:flex;gap:10px;align-items:center;flex:none}
+#ofSheet .hd img{width:64px;height:64px;object-fit:contain}
+#ofSheet .hd div{flex:1;min-width:0}
+#ofSheet h2{margin:0;font-size:18px;line-height:1.2}
+#ofSheet .rl{font-size:12px;color:#8a6a4f;font-weight:600}
+#ofSheet .x{border:0;background:#fff;border-radius:50%;width:34px;height:34px;font-size:15px;box-shadow:0 2px 0 #d9c3a1}
+#ofChat{flex:1;min-height:110px;overflow-y:auto;margin:8px 0;display:flex;flex-direction:column;gap:7px;padding:2px 2px 4px;-webkit-overflow-scrolling:touch}
+#ofChat .m{max-width:86%;padding:8px 11px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+#ofChat .m.me{align-self:flex-end;background:#ffe2b3;border-bottom-right-radius:5px}
+#ofChat .m.sp{align-self:flex-start;background:#fff;border:2px solid var(--tc,#e3c9a0);border-bottom-left-radius:5px}
+#ofChat .m.note{align-self:center;background:none;color:#8a6a4f;font-size:12px;padding:0}
+#ofChat .m.err{align-self:center;background:#ffe9e0;color:#9a3a22;font-size:13px;border-radius:12px}
+#ofChat .acts{align-self:flex-start;display:flex;flex-direction:column;gap:5px;max-width:92%}
+#ofChat .acts button{border:2px solid var(--tc,#3f9a6b);background:#fff;border-radius:12px;padding:7px 10px;font-size:13px;font-weight:700;text-align:left}
+#ofChat .acts button.done{opacity:.5;border-style:dashed}
+.ofQuick{display:flex;gap:6px;flex-wrap:wrap;flex:none;margin-bottom:6px}
+.ofQuick button{border:0;background:var(--tc,#3f9a6b);color:var(--tx,#fff);border-radius:14px;padding:8px 12px;font-weight:800;font-size:13px;box-shadow:0 2px 0 #0002}
+#ofForm{display:flex;gap:8px;flex:none}
+#ofForm input{flex:1;min-width:0;border:2px solid #e3c9a0;border-radius:16px;padding:10px 12px;font-size:16px;background:#fff;color:#5b3a24}
+#ofForm button{border:0;border-radius:16px;padding:0 16px;font-weight:800;background:var(--tc,#3f9a6b);color:var(--tx,#fff);box-shadow:0 2px 0 #0002}
+#ofForm button:disabled{opacity:.5}
