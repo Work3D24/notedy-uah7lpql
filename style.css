@@ -228,3 +228,44 @@ body.inOffice{overflow:hidden;position:fixed;inset:0;width:100%;background:#2a1a
 #mKeyBox .krow{display:flex;gap:8px}#mKeyBox .krow button{flex:1;text-align:center;padding:10px}
 #mKeyBox .muted{font-size:12.5px;color:#8a6a4f}
 #ofChat .acts button[data-key]{background:#e46a78;box-shadow:none}
+
+/* ---- top bar like the PC app (phone variant): pills + note button ---- */
+.demoTop{position:absolute;z-index:30;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+.dtL{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.dtRow{display:flex;gap:8px;align-items:center}
+.pillBox{pointer-events:auto;background:#fffffff2;border-radius:18px;padding:6px 10px;display:flex;align-items:center;gap:6px;color:#303c73;box-shadow:0 3px 13px #40396118;border:0;font:inherit}
+.pillBox strong{font-size:17px}.pillBox .cat{font-size:26px;line-height:1}
+.pillBtn{font-size:12px;font-weight:600}.pillBtn .sep{width:1px;height:14px;background:#ddd}.pillBtn b{font-size:15px}
+.noteBtn{pointer-events:auto;border:0;background:#fff;border-radius:14px;width:46px;height:46px;padding:5px;box-shadow:0 4px 14px #5b45281f;display:inline-flex;align-items:center;justify-content:center}.noteBtn:active{transform:rotate(-6deg) scale(1.06)}.noteBtn svg{width:34px;height:34px}
+.dtR{display:flex;gap:8px;pointer-events:auto}.dtR .ico{width:38px;height:38px;border-radius:50%;border:0;background:#fffffff2;box-shadow:0 3px 13px #40396118;font-size:17px;padding:0}.dtR .ico:disabled{opacity:.5}
+/* ---- chat entries: same sizes/colours as the PC app ---- */
+#ofChat{gap:6px}
+#ofChat .cm{padding:8px 11px;border-radius:12px;font-size:13.5px;line-height:1.55;max-width:94%;overflow-wrap:anywhere}
+#ofChat .cm.u{align-self:flex-end;background:var(--t1);color:#fff}
+#ofChat .cm.b{align-self:flex-start;background:#fff;border:1px solid color-mix(in srgb,var(--t1) 45%,#fff);color:#3a3560}
+#ofChat .cm.x{align-self:stretch;max-width:100%;background:#f4f1ff;border:1px dashed #cfc6f2;color:#5a5490;font-size:12.5px}
+#ofChat .cm.muted{color:#7d7aa0}
+#ofChat .mrow{display:flex;gap:8px;align-self:flex-start;max-width:96%;align-items:flex-start}#ofChat .mrow .cm{max-width:100%}#ofChat .mrow.sm{align-self:stretch}#ofChat .mrow.sm .mcol{flex:1}#ofChat .mrow.sm .av{width:30px;height:30px}
+#ofChat .actRow{margin-top:6px}
+#ofChat .btn,#ofKey .btn{border:1px solid #d9d3ee;background:#fff;color:#4c4575;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:650;text-align:left;white-space:normal}
+#ofChat .btn.pri{background:var(--t1);color:#fff;border:0;box-shadow:0 4px 13px color-mix(in srgb,var(--t1) 35%,transparent)}
+#ofChat .clr{border:0;background:none;color:#8a85b4;text-decoration:underline;font-size:12px;padding:2px}
+#ofChat .muted{font-size:12.5px}
+#ofKey .muted{font-size:12.5px;color:#7d7aa0;line-height:1.5}#ofKey .krow{display:flex;gap:6px;margin-top:6px}#ofKey input{flex:1;min-width:0;font-size:16px;padding:7px 10px;border:1px solid #ebe8f2;border-radius:10px}
+[data-replay]{cursor:pointer}.rpHint{display:block;margin-top:3px;font-size:11px;opacity:.85;text-decoration:underline}
+#ofChat .cm.x[data-replay]:active,#ofChat .cm.u[data-replay]:active{filter:brightness(.96)}
+#ofSheet[data-dark="1"] #ofChat .cm.b{background:#3d3a63;color:#f0eeff;border-color:#5a5690}#ofSheet[data-dark="1"] #ofChat .cm.x{background:#34315a;color:#d6d2ff;border-color:#6a64a8}#ofSheet[data-dark="1"] #ofChat .cm.u{background:#8d86d9;color:#1d1b33}
+#ofSheet[data-dark="1"] #ofChat .btn.pri{color:#1d1b33}#ofSheet[data-dark="1"] #ofKey .muted,#ofSheet[data-dark="1"] #ofChat .muted{color:#b6b1e0}
+/* ---- popup parts that were missing: close button, answer bar, replay button ---- */
+.fxFoot{display:flex;justify-content:center;margin-top:6px;min-height:30px}
+.fxAgain{border:0;border-radius:99px;background:#ffffffd9;color:#5a5490;font-weight:700;font-size:12.5px;padding:5px 14px}
+.fxBar{position:absolute;left:0;bottom:0;height:5px;width:100%;background:#7762c6aa;transform-origin:left}
+@keyframes fxBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.fxBar{animation:none!important}}
+/* ---- daily note opens over the room ---- */
+#noteWrap{position:absolute;z-index:55;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(70,48,30,.5);backdrop-filter:blur(3px);padding:calc(env(safe-area-inset-top,0px) + 26px) 12px calc(env(safe-area-inset-bottom,0px) + 12px)}
+#noteWrap[hidden]{display:none}
+#noteWrap #content{width:min(480px,100%);max-height:100%;display:flex;flex-direction:column;min-height:0}
+#noteWrap .board{margin-top:0;flex:1;min-height:0;display:flex;flex-direction:column}
+#noteWrap .paper{overflow-y:auto;min-height:0;flex:1}
+#noteWrap .noteBack{position:absolute;top:calc(env(safe-area-inset-top,0px) + 30px);left:20px;z-index:3;border:0;background:#fff;border-radius:14px;width:40px;height:40px;font-size:20px;box-shadow:0 3px 10px #2c180a33}
+#noteWrap .noteBulk{position:absolute;left:18px;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);margin:0;padding:8px;border-radius:18px;background:#fff8e6f2;box-shadow:0 6px 20px #2c180a44}
