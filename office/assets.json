@@ -1,5 +1,5 @@
 {
- "built": "2026-10-29 05:20:05",
+ "built": "2026-10-29 05:26:22",
  "chars": [
   {
    "id": "Notedy",
@@ -99,7 +99,7 @@
    },
    "sleep": {
     "day": "img/chars/Drivey_sleep.webp",
-    "night": "img/chars/Drivey_sleep.webp",
+    "night": "img/chars/Drivey_sleep_night.webp",
     "x": -13.0,
     "y": -81,
     "w": 666,
@@ -141,7 +141,7 @@
    },
    "sleep": {
     "day": "img/chars/Linky_sleep.webp",
-    "night": "img/chars/Linky_sleep.webp",
+    "night": "img/chars/Linky_sleep_night.webp",
     "x": -5.0,
     "y": -146,
     "w": 650,
@@ -204,10 +204,10 @@
    },
    "sleep": {
     "day": "img/chars/Drawy_sleep.webp",
-    "night": "img/chars/Drawy_sleep.webp",
-    "x": -5.5,
+    "night": "img/chars/Drawy_sleep_night.webp",
+    "x": -6.0,
     "y": -57,
-    "w": 651,
+    "w": 652,
     "h": 675
    }
   },
