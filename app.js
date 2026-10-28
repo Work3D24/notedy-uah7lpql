@@ -286,6 +286,23 @@
   function trunc(x, n) { x = String(x || ""); return x.length > n ? x.slice(0, n - 1) + "…" : x; }
   function b64url(str) { return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, "-").replace(/\//g, "_"); }
   function isNight() { var h = parseInt(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date()), 10); return h >= 18 || h < 6; }
+  /* room light: 0 = day (brightest) ... 1 = night (darkest). Auto follows Bangkok time with a smooth dusk/dawn; the slider takes over until "auto" is pressed */
+  var toneCfg = (function () { try { var v = JSON.parse(localStorage.getItem("notedy.tone") || "null"); if (v && v.mode === "manual" && v.v >= 0 && v.v <= 1) return v; } catch (e) { /* default */ } return { mode: "auto" }; })();
+  function autoTone() {
+    var p = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date()).split(":"), h = +p[0] + p[1] / 60;
+    if (h >= 8 && h < 17) return 0; if (h >= 19 || h < 6) return 1;
+    return h < 8 ? 1 - (h - 6) / 2 : (h - 17) / 2;                          /* 06-08 dawn, 17-19 dusk */
+  }
+  function curTone() { return toneCfg.mode === "manual" ? toneCfg.v : autoTone(); }
+  function toneUi() {
+    var r = $("toneRange"); if (!r) return; var t = curTone(); if (document.activeElement !== r) r.value = Math.round(t * 100);
+    $("toneAuto").classList.toggle("on", toneCfg.mode !== "manual");
+    $("toneTxt").textContent = (toneCfg.mode === "manual" ? "ปรับเอง" : "อัตโนมัติตามเวลา") + " · " + (t < 0.05 ? "Day สว่างสุด" : t > 0.95 ? "Night มืดสุด" : "มืด " + Math.round(t * 100) + "%");
+  }
+  function applyTone() { if (office) office.setTone(curTone()); toneUi(); }
+  function setToneManual(v) { toneCfg = { mode: "manual", v: Math.min(1, Math.max(0, v)) }; try { localStorage.setItem("notedy.tone", JSON.stringify(toneCfg)); } catch (e) { /* not saved */ } applyTone(); }
+  function setToneAuto() { toneCfg = { mode: "auto" }; try { localStorage.removeItem("notedy.tone"); } catch (e) { /* ignore */ } applyTone(); }
+  function toggleTone(on) { var p = $("ofTone"); if (!p) return; p.hidden = on === undefined ? !p.hidden : !on; if (!p.hidden) toneUi(); }
   function authFail(e) {                                         // PIN changed / reset elsewhere or token revoked
     if (e.code && PIN_CODES[e.code]) { cfg.p = ""; saveCfg(cfg); gatePin(e.code === "pin_setup" ? "" : e.message); return true; }
     if (e.code === "unauthorized") { cfg = null; clearCfgStore(); renderSetup(e.message); return true; }
@@ -304,7 +321,8 @@
     o.innerHTML = '<div id="ofStage"></div>' +
       '<div class="demoTop"><div class="dtL"><div class="dtRow"><div class="pillBox"><span class="cat">🐱</span><strong>Notedy</strong></div><button class="noteBtn" data-note="1" type="button" aria-label="โน้ตประจำวัน" title="โน้ตประจำวัน">' + NOTE_ICON + '</button><button class="noteBtn wkBtn" data-wkopen="1" type="button" aria-label="หน้าสรุปงานเต็ม" title="หน้าสรุปงานเต็ม (จัดหมวด · PDF)">' + WORK_ICON + "</button></div>" +
       '<div class="pillBox pillBtn"><button type="button" id="ofPeriodBtn" class="pb" aria-label="เลือกรอบ"><span id="ofPeriod"></span><span class="car">▾</span></button><span class="sep"></span><button type="button" id="ofPend" class="pb" aria-label="ไปหน้าค้างตรวจ">📋 รอตรวจ <b id="ofPendN">–</b></button></div></div>' +
-      '<div class="dtR"><button class="ico" id="menuBtn" type="button" aria-label="เมนู">⚙</button></div></div>' +
+      '<div class="dtR"><button class="ico" id="toneBtn" type="button" aria-label="ปรับแสงในห้อง (Day / Night)" title="ปรับแสง Day / Night">🌗</button><button class="ico" id="menuBtn" type="button" aria-label="เมนู">⚙</button></div></div>' +
+      '<div id="ofTone" hidden><div class="tCard"><div class="tTop"><b>แสงในห้อง</b><button type="button" id="toneAuto" class="tAuto">อัตโนมัติ</button><button type="button" id="toneX" class="tX" aria-label="ปิด">✕</button></div><div class="tRow"><span aria-hidden="true">☀️</span><input id="toneRange" type="range" min="0" max="100" step="1" aria-label="ความมืด: Day ถึง Night"><span aria-hidden="true">🌙</span></div><div class="tLb"><span>Day</span><small id="toneTxt"></small><span>Night</span></div></div></div>' +
       '<button class="handle" id="ofHandle" type="button" aria-label="เมนูลัด"><i></i></button>' +
       '<div id="ofQuick" hidden><div class="qCard"><button type="button" data-q="pending">📥<span>ค้างตรวจ</span></button><button type="button" data-q="day">📒<span>โน้ตรายวัน</span></button><button type="button" data-q="work">📊<span>สรุปงาน</span></button><button type="button" data-q="menu">⚙<span>เมนู</span></button></div></div>' +
       '<div id="ofPeriodMenu" hidden><div class="mCard"><h3>เลือกรอบ (26 → 26)</h3><div id="ofPeriodList"></div><button type="button" id="ppClose" class="plain">ปิด</button></div></div>' +
@@ -323,7 +341,7 @@
     }
     loadOfficeAssets().then(function () {
       if (view !== "office" || office) return;
-      office = new Office($("ofStage"), { base: "office/", onTap: openSheet }); office.load(ofAssets, ofLayout, isNight()); office.setBadges(ofBadges);
+      office = new Office($("ofStage"), { base: "office/", onTap: openSheet }); office.load(ofAssets, ofLayout, curTone()); office.setBadges(ofBadges);
     }).catch(function () { toast("โหลดภาพห้องไม่สำเร็จ ลองเปิดใหม่"); });
     var cs = lsGet("notedy.cache.data"); if (cs && cs.items && status.pending == null) {                     // last known numbers right away, fresh ones follow
       var pn0 = cs.items.filter(function (f) { return f.decision === "pending"; }).length; status = Object.assign({}, status, { pending: pn0 }); ofBadges = { Minty: pn0 };
@@ -892,7 +910,7 @@
     var vv = window.visualViewport, kb = function () { var sh = $("ofSheet"); if (!sh) return; sh.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; sh.style.maxHeight = Math.max(280, Math.min(window.innerHeight * 0.9, vv.height - 10)) + "px"; };
     vv.addEventListener("resize", kb); vv.addEventListener("scroll", kb);
   }
-  setInterval(function () { if (office && view === "office") office.setNight(isNight()); }, 60000);
+  setInterval(function () { if (office && view === "office" && toneCfg.mode !== "manual") applyTone(); }, 30000);
 
 
   /* ---------- the full work page: look by category, confirm / move categories, rename, make the PDF (the PC "full page", in one column for the phone) ---------- */
@@ -1032,6 +1050,10 @@
     if (cb) { var ck = cb.dataset.chat; if (ck === "act") chatAct(cb.dataset.eid, +cb.dataset.ai); else if (ck === "openkey") openKeyBox(); return; }
     if (t.closest("#fxClose") || t.id === "ofAsk") { fxUserClose(); return; }
     if (t.closest("#fxAgain")) { if (fx.item) replay([fx.item]); return; }
+    if (t.closest("#toneBtn")) { toggleTone(); return; }
+    if (t.closest("#toneX")) { toggleTone(false); return; }
+    if (t.closest("#toneAuto")) { setToneAuto(); return; }
+    var tp = $("ofTone"); if (tp && !tp.hidden && !t.closest("#ofTone")) toggleTone(false);
     if (t.closest("[data-wkopen]")) { openWork(); return; }
     var wb = t.closest("#workPage [data-wk]"); if (wb) { wkAct(wb); return; }
     if (t.closest("[data-note]")) { openNote(); return; }
@@ -1057,7 +1079,7 @@
     if (t.value.length < 6) return;
     if ($("app").dataset.pin === "create") { if (t.id === "pinA") $("pinB").focus(); else submitPin(); } else submitPin();
   });
-  document.addEventListener("input", function (e) { var id = e.target && e.target.id; if (id === "ofSearch") searchRefresh(); else if (id === "wkQ") { wk.q = e.target.value; wkRefreshDyn(); } });
+  document.addEventListener("input", function (e) { var id = e.target && e.target.id; if (id === "ofSearch") searchRefresh(); else if (id === "wkQ") { wk.q = e.target.value; wkRefreshDyn(); } else if (id === "toneRange") setToneManual(e.target.value / 100); });
   document.addEventListener("change", function (e) {
     var t = e.target; if (!t) return;
     if (t.id === "ofSF" || t.id === "ofST" || t.id === "ofSS") searchRefresh();
@@ -1078,7 +1100,7 @@
   });
   document.addEventListener("submit", function (e) { if (e.target && e.target.id === "ofForm") { e.preventDefault(); var iv = $("ofIn").value; $("ofIn").value = ""; chatSend(iv); } });
   document.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target && (e.target.id === "pinA" || e.target.id === "pinB")) submitPin(); });
-  document.addEventListener("visibilitychange", function () { if (document.hidden || !cfg || !cfg.p) return; if (view === "office") { if (office) office.setNight(isNight()); officeData(); } else if (!busy) load(true); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden || !cfg || !cfg.p) return; if (view === "office") { if (office && toneCfg.mode !== "manual") applyTone(); officeData(); } else if (!busy) load(true); });
 
   /* ---------- boot ---------- */
   day = todayStr();

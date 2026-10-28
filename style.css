@@ -337,3 +337,18 @@ body.wkOpen{overflow:hidden}
 .wkSide select{width:100%;font-size:14px}
 .wkLk{display:flex;justify-content:space-between;align-items:center;font-size:12.5px}.wkLk a{color:#2b5bd6;text-decoration:none;font-weight:700}
 @media (max-width:520px){.wkCard{flex-direction:column}.wkSide{width:100%;max-width:none}}
+
+/* ---- room light (Day <-> Night slider) ---- */
+.dtR{align-items:center}
+#ofTone{position:absolute;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:12px;width:min(310px,calc(100% - 24px))}#ofTone[hidden]{display:none}
+.tCard{background:#fff9efee;border:1.5px solid #fff;border-radius:20px;padding:12px 14px 10px;box-shadow:0 12px 34px #0005;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#4b3b2a}
+.tTop{display:flex;align-items:center;gap:8px}.tTop b{flex:1;font-size:14px}
+.tAuto{border:1.5px solid #d9c3a1;background:#fff;border-radius:99px;padding:5px 11px;font-weight:800;font-size:12px;color:#7a5a3a}.tAuto.on{background:#4aa57a;border-color:#4aa57a;color:#fff}
+.tX{border:0;background:#fff;border-radius:50%;width:28px;height:28px;font-size:13px;color:#7a5a3a}
+.tRow{display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:18px}
+#toneRange{flex:1;min-width:0;height:28px;-webkit-appearance:none;appearance:none;background:transparent}
+#toneRange::-webkit-slider-runnable-track{height:12px;border-radius:99px;background:linear-gradient(90deg,#ffe9a8,#f6b36b 35%,#5b5fa8 70%,#1b1f4a);box-shadow:inset 0 0 0 1.5px #fff9}
+#toneRange::-moz-range-track{height:12px;border-radius:99px;background:linear-gradient(90deg,#ffe9a8,#f6b36b 35%,#5b5fa8 70%,#1b1f4a)}
+#toneRange::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-8px;border-radius:50%;background:#fff;border:3px solid #7a5a3a;box-shadow:0 2px 8px #0004}
+#toneRange::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid #7a5a3a}
+.tLb{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;font-weight:800;color:#8a6a4f}.tLb small{font-weight:600;font-size:11.5px;color:#8a6a4f;text-align:center;flex:1}

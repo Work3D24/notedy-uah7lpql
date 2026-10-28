@@ -39,3 +39,9 @@
 .of-lock .of-pin{position:absolute;inset:0}
 .of-fill{display:none;position:absolute;left:-40px;top:-40px;width:calc(100% + 80px);height:calc(100% + 80px);object-fit:cover;filter:blur(18px) brightness(.85);pointer-events:none}
 .of-lock .of-fill{display:block}
+
+/* day <-> night: the night image sits on the day one and fades in with --tn (0 = day, 1 = night) */
+.of-it img.of-n{position:absolute;left:0;top:0;width:100%;opacity:var(--tn,0)}
+.of-bg.of-n{opacity:var(--tn,0)}
+.of-wrap{isolation:isolate}
+.of-fx{will-change:opacity}

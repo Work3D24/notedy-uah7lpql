@@ -28,7 +28,7 @@
   var BY = {}; ROSTER.forEach(function (r) { BY[r.id] = r; });
   /* atmosphere: floating light dust (canvas) + the slight "breathing" of the spirits. Tuned in the editor, saved as layout.fx */
   var FXD = { on: true, count: 36, min: 0.8, max: 2.4, speed: 8, rise: 0.5, drift: 10, twinkle: 1, alpha: 0.6, sparkle: 0.3, glow: 3,
-              layer: 'front', colorDay: '#fff1bf', colorNight: '#c9dcff', breath: 2, breathSpeed: 4.2 };
+              layer: 'front', colorDay: '#fff1bf', colorNight: '#c9dcff', blend: 'screen', breath: 2, breathSpeed: 4.2 };
   function el(t, c) { var e = document.createElement(t); if (c) e.className = c; return e; }
   function find(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
@@ -56,18 +56,18 @@
   }
 
   function Office(root, o) {
-    var me = this; me.o = o || {}; me.root = root; me.night = false; me.A = { chars: [], decos: [], bg: null }; me.L = null; me.it = {}; me.badges = {}; me.sel = null;
+    var me = this; me.o = o || {}; me.root = root; me.night = false; me.tone = 0; me.A = { chars: [], decos: [], bg: null }; me.L = null; me.it = {}; me.badges = {}; me.sel = null;
     root.classList.add('of'); if (me.o.editor) root.classList.add('of-ed');
     me.fill = el('img', 'of-fill'); me.fill.alt = ''; me.fill.draggable = false; root.appendChild(me.fill);       /* blurred copy of the BG behind a letter-boxed scene */
-    me.scroll = el('div', 'of-scroll'); me.wrap = el('div', 'of-wrap'); me.bg = el('img', 'of-bg'); me.bg.draggable = false; me.bg.alt = '';
+    me.scroll = el('div', 'of-scroll'); me.wrap = el('div', 'of-wrap'); me.bg = el('img', 'of-bg'); me.bg.draggable = false; me.bg.alt = ''; me.bgN = el('img', 'of-bg of-n'); me.bgN.draggable = false; me.bgN.alt = '';
     me.cBack = el('div', 'of-layer'); me.cChars = el('div', 'of-layer'); me.cFront = el('div', 'of-layer'); me.pin = el('div', 'of-pin');
-    me.wrap.appendChild(me.bg); me.wrap.appendChild(me.cBack); me.wrap.appendChild(me.cChars); me.wrap.appendChild(me.cFront);
+    me.wrap.appendChild(me.bg); me.wrap.appendChild(me.bgN); me.wrap.appendChild(me.cBack); me.wrap.appendChild(me.cChars); me.wrap.appendChild(me.cFront);
     me.scroll.appendChild(me.wrap); root.appendChild(me.scroll); root.appendChild(me.pin);
     if (me.o.editor) me._bgDrag();
   }
   Office.FXD = FXD; Office.ROSTER = ROSTER; Office.BY = BY; Office.normalize = normalize; Office.find = find;
 
-  Office.prototype.load = function (A, L, night) { this.A = A; this.L = normalize(L, A); this.night = !!night; this.sel = null; this.render(); };
+  Office.prototype.load = function (A, L, night) { this.A = A; this.L = normalize(L, A); this.tone = typeof night === 'number' ? Math.min(1, Math.max(0, night)) : (night ? 1 : 0); this.night = this.tone >= .5; this.root.style.setProperty('--tn', this.tone); this.sel = null; this.render(); };
 
   Office.prototype.render = function () {
     var me = this, L = me.L, A = me.A; me.it = {};
@@ -80,7 +80,7 @@
   Office.prototype._add = function (key, kind, asset, P, cont, i) {
     var me = this, def = BY[asset.id] || { th: asset.id };
     var e = el(kind === 'char' && !me.o.editor ? 'button' : 'div', 'of-it of-' + kind); if (e.tagName === 'BUTTON') e.type = 'button';
-    var im = el('img'); im.alt = ''; im.draggable = false; e.appendChild(im);
+    var im = el('img'); im.alt = ''; im.draggable = false; e.appendChild(im); var imN = el('img', 'of-n'); imN.alt = ''; imN.draggable = false; e.appendChild(imN);
     if (kind === 'char') {
       e.style.setProperty('--d', '-' + (i * 0.37).toFixed(2) + 's');
       var bd = el('span', 'bd'); bd.style.display = 'none'; e.appendChild(bd);
@@ -88,7 +88,7 @@
       if (asset.theme) { nm.style.setProperty('--tb', asset.theme.bg); nm.style.setProperty('--tf', asset.theme.fg); nm.style.setProperty('--ts', /^#f{3,}/i.test(asset.theme.fg) ? '0 1px 2px rgba(0,0,0,.4)' : '0 1px 0 rgba(255,255,255,.55)'); }   /* liquid-glass chip tinted with the spirit's colour */
       if (!me.o.editor) e.addEventListener('click', function () { me.o.onTap && me.o.onTap(def, asset); });
     }
-    var it = { key: key, kind: kind, e: e, im: im, asset: asset, P: P, def: def, bd: bd || null };
+    var it = { key: key, kind: kind, e: e, im: im, imN: imN, asset: asset, P: P, def: def, bd: bd || null };
     me.it[key] = it; cont.appendChild(e);
     if (me.o.editor) me._drag(it);
   };
@@ -110,11 +110,11 @@
   Office.prototype.refresh = function () {
     var me = this, L = me.L, A = me.A, n = me.night, b = A.bg;
     if (!me._rz) { me._rz = 1; window.addEventListener('resize', function () { if (me.L && !me._dead) me._fit(); }); }
-    if (b) { me.bg.src = me.fill.src = me.u(n ? b.night : b.day); me.bg.style.width = L.bg.w + 'px'; me.bg.style.left = L.bg.x + '%'; me.bg.style.top = L.bg.y + 'px'; }
+    if (b) { me.bg.src = me.u(b.day); me.bgN.src = me.u(b.night || b.day); me.fill.src = me.u(n ? (b.night || b.day) : b.day); [me.bg, me.bgN].forEach(function (g) { g.style.width = L.bg.w + 'px'; g.style.left = L.bg.x + '%'; g.style.top = L.bg.y + 'px'; }); me.bgN.style.display = b.night && b.night !== b.day ? '' : 'none'; }
     me._fit(); me._fxApply();
     me.root.classList.toggle('bgsel', me.sel === 'bg'); me.root.classList.toggle('fxsel', me.sel === 'fx');
     Object.keys(me.it).forEach(function (k) {
-      var it = me.it[k]; it.im.src = me.u((n ? it.asset.night : it.asset.day) || it.asset.day); me.place(it);
+      var it = me.it[k]; it.im.src = me.u(it.asset.day); it.imN.src = me.u(it.asset.night || it.asset.day); it.imN.style.display = it.asset.night && it.asset.night !== it.asset.day ? '' : 'none'; me.place(it);
       if (it.bd) { var v = me.badges[it.asset.id]; it.bd.style.display = v ? '' : 'none'; it.bd.textContent = v || ''; }
     });
   };
@@ -139,7 +139,13 @@
     var allowed = rh / (2 * Math.max(422 - top + 16, bottom - 422 + 24));
     return Math.max(fit, Math.min(cover, allowed));
   };
-  Office.prototype.setNight = function (n) { this.night = !!n; this.refresh(); };
+  Office.prototype.setNight = function (n) { this.setTone(n ? 1 : 0); };
+  /* 0 = day (brightest) ... 1 = night (darkest): the night images fade in over the day ones (one CSS variable, no reload of images) */
+  Office.prototype.setTone = function (t) {
+    t = Math.min(1, Math.max(0, +t || 0)); var me = this, was = me.night; me.tone = t; me.night = t >= .5;
+    me.root.style.setProperty('--tn', t.toFixed(3));
+    if (me.night !== was && me.A.bg) me.fill.src = me.u(me.night ? (me.A.bg.night || me.A.bg.day) : me.A.bg.day);
+  };
   Office.prototype.setBadges = function (b) { this.badges = b || {}; this.refresh(); };
   Office.prototype.select = function (key) {
     this.sel = key; this.refresh(); this.o.onSelect && this.o.onSelect(key);
@@ -219,6 +225,8 @@
     me.root.style.setProperty('--br', (F.breath || 0) / 100); me.root.style.setProperty('--bs', (F.breathSpeed || 4) + 's');
     me.root.classList.toggle('nobreath', !(F.breath > 0));
     me.fxc.style.display = F.on ? '' : 'none';
+    var bl = F.blend === 'add' ? ((window.CSS && CSS.supports && CSS.supports('mix-blend-mode', 'plus-lighter')) ? 'plus-lighter' : 'screen') : (F.blend === 'normal' ? 'normal' : 'screen');
+    me.fxc.style.mixBlendMode = bl;                                       /* blended with the room (screen / add), so the dust really glows */
     var back = F.layer === 'back';
     if (me.fxc.parentNode !== me.wrap || (back ? me.fxc.nextSibling !== me.cBack : me.fxc.previousSibling !== me.cFront)) me.wrap.insertBefore(me.fxc, back ? me.cBack : me.cFront.nextSibling);
     var lock = !!L.room.lock, W = me.wrap.clientWidth || 390, H = lock ? 844 : L.room.h, sc = lock ? (parseFloat(me.wrap.style.getPropertyValue('--s')) || 1) : 1;
@@ -235,8 +243,10 @@
   Office.prototype._fxFrame = function (t) {
     var me = this, F = me.L && me.L.fx, x = me.fxx; if (!F || !F.on || !me.fxc.width) return;
     var dt = me._fxt ? Math.min(.05, (t - me._fxt) / 1000) : 0; me._fxt = t; var s = t / 1000, W = me._fxW, H = me._fxH;
-    var color = me.night ? F.colorNight : F.colorDay, dot = me._fxs['d' + color] || (me._fxs['d' + color] = makeSprite(color, 0)), star = me._fxs['s' + color] || (me._fxs['s' + color] = makeSprite(color, 1));
-    x.setTransform(me._fxd, 0, 0, me._fxd, 0, 0); x.clearRect(0, 0, W, H); x.globalCompositeOperation = me.night ? 'lighter' : 'source-over';
+    var tn = me.tone || 0, cD = F.colorDay, cN = F.colorNight, bright = 1 + .35 * tn;                     /* the dust shifts from day colour to night colour, a little brighter in the dark */
+    var dotD = me._fxs['d' + cD] || (me._fxs['d' + cD] = makeSprite(cD, 0)), starD = me._fxs['s' + cD] || (me._fxs['s' + cD] = makeSprite(cD, 1));
+    var dotN = me._fxs['d' + cN] || (me._fxs['d' + cN] = makeSprite(cN, 0)), starN = me._fxs['s' + cN] || (me._fxs['s' + cN] = makeSprite(cN, 1));
+    x.setTransform(me._fxd, 0, 0, me._fxd, 0, 0); x.clearRect(0, 0, W, H); x.globalCompositeOperation = 'lighter';
     for (var i = 0; i < me.fxp.length; i++) {
       var p = me.fxp[i];
       p.y -= F.rise * F.speed * (.4 + p.v * 1.2) * dt;                                              /* slow rise (or fall if rise < 0) */
@@ -247,7 +257,9 @@
       var isStar = p.u < F.sparkle, a = F.alpha * (.12 + .88 * (isStar ? tw * tw : tw)) * (.55 + .45 * p.a);
       if (a < .01) continue;
       var r = (F.min + (F.max - F.min) * p.r) * F.glow * (isStar ? 2.2 : 1);
-      x.globalAlpha = Math.min(1, a); x.drawImage(isStar ? star : dot, p.x - r, p.y - r, r * 2, r * 2);
+      a *= bright;
+      if (tn < .98) { x.globalAlpha = Math.min(1, a * (1 - tn)); x.drawImage(isStar ? starD : dotD, p.x - r, p.y - r, r * 2, r * 2); }
+      if (tn > .02) { x.globalAlpha = Math.min(1, a * tn); x.drawImage(isStar ? starN : dotN, p.x - r, p.y - r, r * 2, r * 2); }
     }
     x.globalAlpha = 1;
   };
