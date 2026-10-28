@@ -77,7 +77,7 @@
   }
   function actsHtml(dec) {
     return dec === "pending"
-      ? '<div class="nbtns"><button class="nbig ok" data-nd="work" type="button">✓ เป็นงาน</button><button class="nbig no" data-nd="not-work" type="button">✕ ไม่ใช่งาน</button></div>'
+      ? '<select class="catSel" aria-label="หมวดงาน">' + catOpts() + '</select><div class="nbtns"><button class="nbig ok" data-nd="work" type="button">✓ เป็นงาน</button><button class="nbig no" data-nd="not-work" type="button">✕ ไม่ใช่งาน</button></div>'
       : '<div class="nundo"><button class="nlink" data-nd="pending" type="button">↩ แก้การตัดสิน</button></div>';
   }
   function subRow(f) { return '<div class="nsub"><span class="nsn">' + esc(f.name) + "<small> " + esc(hhmm(f.modifiedTime)) + "</small></span>" + tagHtml(f.decision || "pending", true) + (f.link ? '<a href="' + esc(f.link) + '" target="_blank" rel="noopener">เปิด</a>' : "") + "</div>"; }
@@ -98,7 +98,10 @@
   function rows() { return [].slice.call(document.querySelectorAll("#content .nfile")); }
   function pendingRows() { return rows().filter(function (r) { var t = r.querySelector(".tagslot .ntag"); return t && t.classList.contains("p"); }); }
   function itemsOf(rs) { var out = []; rs.forEach(function (r) { out = out.concat(groupsMap[r.dataset.gid] || []); }); return out; }
-  function decide(items, decision) { return api("decide_many", { items: items, decision: decision }); }
+  function decide(items, decision, cat) { var q = { items: items, decision: decision }; if (cat) q.cat = cat; return api("decide_many", q); }
+  var UNSET = "ไม่ระบุหมวด", catCache = lsGet("notedy.cats") || [], catAt = 0;
+  function catOpts(sel) { return '<option value="">หมวด: อัตโนมัติ</option>' + catCache.map(function (c) { return '<option value="' + esc(c) + '"' + (c === sel ? " selected" : "") + ">" + esc(c) + "</option>"; }).join(""); }
+  function refreshCats() { catAt = Date.now(); api("pdfcfg_get").then(function (r) { catCache = r.cats || []; lsSet("notedy.cats", catCache); }).catch(function () {}); }
   function bulkRender() {
     var bar = $("noteBulk"); if (!bar) return;
     var rs = pendingRows(), n = rs.length, nf = itemsOf(rs).length;
@@ -128,8 +131,8 @@
       decide(last, "pending").then(function () { load(true); }).catch(function (e) { toast(e.message); load(true); });
     } else {
       var row = btn.closest(".nfile"); if (!row) return;
-      bulk.last = null; bulk.armed = false; setRow(row, nd);
-      decide(groupsMap[row.dataset.gid] || [], nd).then(function (r) { if (r.skipped) toast("ข้าม " + r.skipped + " ไฟล์ที่เพิ่งถูกแก้ไข"); bulkRender(); counters(); }).catch(function (e) { toast(e.message); load(true); });
+      bulk.last = null; bulk.armed = false; var cs = row.querySelector(".catSel"), cat = nd === "work" && cs ? cs.value : ""; setRow(row, nd);
+      decide(groupsMap[row.dataset.gid] || [], nd, cat).then(function (r) { if (r.skipped) toast("ข้าม " + r.skipped + " ไฟล์ที่เพิ่งถูกแก้ไข"); bulkRender(); counters(); }).catch(function (e) { toast(e.message); load(true); });
     }
   }
 
@@ -299,11 +302,11 @@
     o.hidden = false; o.classList.remove("open"); noteOpen = false;
     var spOpts = '<option value="">ภูติทุกตัว</option>' + Office.ROSTER.map(function (r) { return '<option value="' + r.id + '">' + esc(r.th) + "</option>"; }).join("");
     o.innerHTML = '<div id="ofStage"></div>' +
-      '<div class="demoTop"><div class="dtL"><div class="dtRow"><div class="pillBox"><span class="cat">🐱</span><strong>Notedy</strong></div><button class="noteBtn" data-note="1" type="button" aria-label="โน้ตประจำวัน" title="โน้ตประจำวัน">' + NOTE_ICON + "</button></div>" +
+      '<div class="demoTop"><div class="dtL"><div class="dtRow"><div class="pillBox"><span class="cat">🐱</span><strong>Notedy</strong></div><button class="noteBtn" data-note="1" type="button" aria-label="โน้ตประจำวัน" title="โน้ตประจำวัน">' + NOTE_ICON + '</button><button class="noteBtn wkBtn" data-wkopen="1" type="button" aria-label="หน้าสรุปงานเต็ม" title="หน้าสรุปงานเต็ม (จัดหมวด · PDF)">' + WORK_ICON + "</button></div>" +
       '<div class="pillBox pillBtn"><button type="button" id="ofPeriodBtn" class="pb" aria-label="เลือกรอบ"><span id="ofPeriod"></span><span class="car">▾</span></button><span class="sep"></span><button type="button" id="ofPend" class="pb" aria-label="ไปหน้าค้างตรวจ">📋 รอตรวจ <b id="ofPendN">–</b></button></div></div>' +
       '<div class="dtR"><button class="ico" id="menuBtn" type="button" aria-label="เมนู">⚙</button></div></div>' +
       '<button class="handle" id="ofHandle" type="button" aria-label="เมนูลัด"><i></i></button>' +
-      '<div id="ofQuick" hidden><div class="qCard"><button type="button" data-q="pending">📥<span>ค้างตรวจ</span></button><button type="button" data-q="day">📒<span>โน้ตรายวัน</span></button><button type="button" data-q="menu">⚙<span>เมนู</span></button></div></div>' +
+      '<div id="ofQuick" hidden><div class="qCard"><button type="button" data-q="pending">📥<span>ค้างตรวจ</span></button><button type="button" data-q="day">📒<span>โน้ตรายวัน</span></button><button type="button" data-q="work">📊<span>สรุปงาน</span></button><button type="button" data-q="menu">⚙<span>เมนู</span></button></div></div>' +
       '<div id="ofPeriodMenu" hidden><div class="mCard"><h3>เลือกรอบ (26 → 26)</h3><div id="ofPeriodList"></div><button type="button" id="ppClose" class="plain">ปิด</button></div></div>' +
       '<div id="ofScrim"></div><div id="ofSheet" role="dialog" aria-modal="true" data-dark="0"><div class="grab"></div><div class="phead"><img id="ofImg" alt=""><div><h2 id="ofNm"></h2><small id="ofRl"></small></div><button class="x" id="ofX" type="button" aria-label="ปิด">✕</button></div>' +
       '<div class="strip" id="ofStrip"></div><div id="ofBody"></div>' +
@@ -383,7 +386,7 @@
     return Promise.all([api("status"), api("daily", { date: todayStr() })]).then(function (r) {
       status = r[0]; var gs = groupFiles(r[1].files || []);
       ofToday = { groups: gs.length, files: r[1].files_total || 0, pending: gs.filter(function (g) { return groupDecision(g) === "pending"; }).length };
-      ofBadges = { Minty: status.pending || 0, Notedy: ofToday.pending };
+      ofBadges = { Minty: status.pending || 0, Notedy: ofToday.pending }; if (Date.now() - catAt > 600000) refreshCats();
       if (office) office.setBadges(ofBadges); headerOffice();
     }).catch(function (e) { if (!authFail(e)) toast(e.message); });
   }
@@ -628,7 +631,7 @@
     ofGroups[g.gid] = g.files.map(function (f) { return { file_id: f.id, version: f.version }; });
     var sub = g.files.length + " ไฟล์ · " + dayTime(newest(g)) + (g.path ? " · " + g.path : "");
     return '<div class="item"><div class="nm"><b>' + (g.folder ? "📁 " : "") + esc(g.name) + "</b><small>" + esc(sub) + "</small></div>" +
-      (decide ? '<div class="dec"><button type="button" class="dbtn ok" data-md="work" data-g="' + esc(g.gid) + '">✓ งาน</button><button type="button" class="dbtn no" data-md="not-work" data-g="' + esc(g.gid) + '">✕ ไม่ใช่</button></div>'
+      (decide ? '<div class="dec"><button type="button" class="dbtn ok" data-md="work" data-g="' + esc(g.gid) + '">✓ งาน</button><button type="button" class="dbtn no" data-md="not-work" data-g="' + esc(g.gid) + '">✕ ไม่ใช่</button></div><select class="catSel" aria-label="หมวดงาน">' + catOpts() + "</select>"
               : (g.link ? '<a class="lnk" href="' + esc(g.link) + '" target="_blank" rel="noopener">เปิด ↗</a>' : "")) + "</div>";
   }
   function searchHtml(q, from, to, sort) {
@@ -687,6 +690,7 @@
     { k: ["key", "ai", "คุยไม่ได้", "gemini", "api"], q: "ภูติคุยไม่ได้ / ใส่ API key", a: "กด ⚙ → ใส่ Gemini API key (ขอฟรีที่ aistudio.google.com/apikey) ถ้ายังไม่มี key ภูติตอบคำสั่งพื้นฐานแบบกฎได้ เช่น “ค้างตรวจ” “ซิงก์” “สรุปรอบ”" },
     { k: ["รหัส", "pin", "ลืม"], q: "ลืมรหัสผ่านแอป", a: "ให้ผู้พัฒนารัน resetPin ในสคริปต์ แล้วเปิดแอปตั้งรหัสใหม่ (ใส่ผิด 5 ครั้งล็อก 15 นาที)" },
     { k: ["มือถือ", "เครื่องอื่น", "qr", "คอม"], q: "เปิดบนเครื่องอื่น", a: "บนเครื่องที่เปิดอยู่ กด ⚙ → เปิดบนมือถือ (QR) แล้วสแกนด้วยกล้อง จากนั้นใส่รหัสผ่านแอปเดิม" },
+    { k: ["หมวด", "สรุปเต็ม", "จัดหมวด", "หน้าเต็ม"], q: "จัดหมวดงาน / หน้าสรุปเต็ม", a: "แตะปุ่ม 📊 ข้างโน้ตรายวันที่หน้าห้อง (หรือปุ่มสรุปงานในเมนูลัด) จะเปิดหน้าสรุปเต็ม เลือกดูตามหมวด ย้ายชิ้นงานเข้าหมวด แก้ชื่อ และสร้าง PDF ส่วนตอนตรวจงานที่มินตี้ก็เลือกหมวดได้ที่ช่อง “หมวด” ข้างปุ่ม ✓ งาน" },
     { k: ["pdf", "พีดีเอฟ", "รายงาน", "hr"], q: "สร้าง PDF ส่ง HR", a: "ไปที่นิวนิว (หรือดรอวี่) เลือกช่วงวันที่แล้วกดสร้าง PDF จะเปิดให้บันทึกลงโทรศัพท์ (Files) หรือแชร์ต่อ" },
     { k: ["แจ้งเตือน", "เด้ง", "popup", "noti"], q: "การแจ้งเตือนแฟ้มใหม่", a: "บน iPhone เพิ่มแอปลงหน้าจอโฮมก่อน (แชร์ → เพิ่มลงหน้าจอโฮม) เปิดจากไอคอน แล้วกด ⚙ → แจ้งเตือนบนมือถือ → เปิด จะเด้งเตือนเมื่อมีแฟ้มอัปเดตใหม่ (นับเป็นแฟ้ม) แม้ปิดแอปอยู่" }
   ];
@@ -696,7 +700,7 @@
     var pr = periodSel(), items = inPeriod(d.items, pr), work = items.filter(function (f) { return f.decision === "work"; }), gs = groupFiles(work), sc = Math.round(docScale() * 100);
     var scale = def.id === "Drawy" ? card("ขนาดตัวอักษรเอกสาร", '<div class="stat"><b>' + sc + '%</b></div><div class="row">' + actBtn("scale", "A−", ' data-d="-0.05"', "ghost") + actBtn("scale", "A+", ' data-d="0.05"', "ghost") + actBtn("scale", "100%", ' data-reset="1"', "ghost") + '</div><div class="muted">มีผลกับ PDF ที่สร้างจากมือถือ (80–120%)</div>') : "";
     return scale + card("📄 สร้าง PDF สรุปงาน", '<div class="muted">รอบที่เลือก: ' + esc(periodLabel(pr)) + " · ตอนนี้ยืนยันเป็นงานแล้ว <b>" + gs.length + "</b> ชิ้นงาน (" + work.length + ' ไฟล์) · เปลี่ยนรอบที่พิลล์มุมบนซ้าย หรือเลือกช่วงเอง:</div>' +
-      '<div class="row"><input type="date" id="pdFrom" value="' + pr.from + '"> – <input type="date" id="pdTo" value="' + pr.to + '"></div><div class="row">' + actBtn("pdf", "📄 สร้าง PDF") + "</div>" +
+      '<div class="row"><input type="date" id="pdFrom" value="' + pr.from + '"> – <input type="date" id="pdTo" value="' + pr.to + '"></div><div class="row">' + actBtn("pdf", "📄 สร้าง PDF") + goBtn("work", "📊 หน้าสรุปเต็ม (จัดหมวด)") + "</div>" +
       '<div id="pdfSt" class="muted">' + esc(pdfMsg) + '</div><div class="muted">เสร็จแล้วจะเปิดหน้าให้เลือกบันทึกลงโทรศัพท์ (ไฟล์) หรือแชร์ต่อ ในรายงานนับเฉพาะแฟ้มที่ตัดสินเป็น “เป็นงาน”</div>') +
       card("🗂️ จัดหมวดชิ้นงานใน PDF", '<div class="muted">หน้าตา PDF เหมือนแบบที่ทำบนคอม: หมวด | ชิ้นงาน (จำนวนไฟล์) | เปิดไฟล์ — เลือกหมวดของแต่ละชิ้นงานที่นี่ ระบบจำไว้ใช้รอบถัดไป</div>' +
         '<div class="row"><input type="text" id="pdWho" placeholder="ชื่อใต้หัวเรื่อง (Graphic Designer)" value="' + esc(pdWho == null ? "" : pdWho) + '"> ' + actBtn("pdwho", "บันทึกชื่อ", "", "ghost") + "</div>" +
@@ -719,16 +723,17 @@
     if (def.id === "Notedy") {
       var dec = today.filter(function (g) { return groupDecision(g) !== "pending"; }).length;
       out += card("🗓️ รอบ " + esc(periodLabel(pr)), '<div class="stat">' + (!isCur ? "รอบที่ผ่านมาแล้ว" : dl > 0 ? "เหลืออีก <b>" + dl + "</b> วันถึงวันส่ง" : dl === 0 ? "<b>วันนี้วันส่งแล้ว</b>" : "ผ่านวันส่งมาแล้ว <b>" + (-dl) + "</b> วัน") + '</div><div class="bar"><i style="width:' + Math.max(0, Math.min(100, Math.round(dayDiff(todayStr(), pr.from) * 100 / Math.max(1, dayDiff(pr.to, pr.from))))) + '%"></i></div><div class="muted">วันส่งคือ ' + esc(shortDate(pr.to)) + " (วันที่ 26)</div>");
-      out += card("📒 สรุปวันนี้", '<div class="stat"><b>' + today.length + "</b> แฟ้มมีไฟล์เปลี่ยน · <b>" + (d.daily.files_total || 0) + '</b> ไฟล์</div><div class="bar"><i style="width:' + (today.length ? Math.round(dec * 100 / today.length) : 0) + '%"></i></div><div class="muted">ตัดสินแล้ว ' + dec + "/" + today.length + ' แฟ้ม</div><div class="row">' + goBtn("day", "📒 เปิดโน้ตรายวัน") + goBtn("pending", "📥 ค้างตรวจ (" + (status.pending || 0) + ")") + "</div>");
+      out += card("📒 สรุปวันนี้", '<div class="stat"><b>' + today.length + "</b> แฟ้มมีไฟล์เปลี่ยน · <b>" + (d.daily.files_total || 0) + '</b> ไฟล์</div><div class="bar"><i style="width:' + (today.length ? Math.round(dec * 100 / today.length) : 0) + '%"></i></div><div class="muted">ตัดสินแล้ว ' + dec + "/" + today.length + ' แฟ้ม</div><div class="row">' + goBtn("day", "📒 เปิดโน้ตรายวัน") + goBtn("pending", "📥 ค้างตรวจ (" + (status.pending || 0) + ")") + goBtn("work", "📊 หน้าสรุปเต็ม") + "</div>");
       if (pg.length) out += card("ค้างตรวจล่าสุด", pg.slice(0, 4).map(function (g) { return itemRow(g, false); }).join("") + (pg.length > 4 ? '<div class="muted">…อีก ' + (pg.length - 4) + " แฟ้ม</div>" : ""));
     } else if (def.id === "Minty") {
       var nPend = pend.length;
       out += card("📥 แฟ้มค้างตรวจ (" + pg.length + " แฟ้ม · " + nPend + " ไฟล์)", (pg.length ? pg.slice(0, 8).map(function (g) { return itemRow(g, true); }).join("") + (pg.length > 8 ? '<div class="muted">…อีก ' + (pg.length - 8) + " แฟ้ม</div>" : "") +
         '<div class="row">' + goBtn("pending", "ดูทั้งหมด") + "</div>" + '<div class="row">' + (mintyArm ? actBtn("minty-all", "แน่ใจไหม? แตะอีกครั้งเพื่อตั้ง “เป็นงาน” ทั้ง " + pg.length + " แฟ้ม (" + nPend + " ไฟล์)", "", "warnb") : actBtn("minty-all", "✓ ถูกทั้งหมด (" + pg.length + " แฟ้ม · " + nPend + " ไฟล์)", "", "okb")) + "</div>" : '<div class="muted">ไม่มีอะไรค้าง 🎉</div>') +
         (mintyLast ? '<div class="row"><span class="muted">✓ ตั้งเป็นงานแล้ว ' + mintyLast.length + " ไฟล์</span>" + actBtn("minty-undo", "↩ ยกเลิกทั้งหมด", "", "ghost") + "</div>" : ""));
+      out += wkSummaryCard();
     } else if (def.id === "Drivey") {
       out += card("☁️ สถานะ Drive", '<div class="kv">ซิงก์ล่าสุด <b>' + (status.last_success ? esc(dayTime(status.last_success)) : "ยังไม่เคย") + '</b></div><div class="kv">ไฟล์ที่ติดตาม <b>' + (status.total || items.length) + "</b> · รอตรวจ <b>" + (status.pending || 0) + "</b></div>" +
-        (status.error ? '<div class="warnTxt">ซิงก์ผิดพลาด: ' + esc(status.error) + "</div>" : '<div class="muted">ซิงก์อัตโนมัติทุก 30 นาที (อ่านเฉพาะชื่อ แฟ้ม วันที่ ไม่อ่านเนื้อไฟล์)</div>') + '<div class="row">' + goBtn("sync", "🔄 ซิงก์ตอนนี้") + "</div>");
+        (status.error ? '<div class="warnTxt">ซิงก์ผิดพลาด: ' + esc(status.error) + "</div>" : '<div class="muted">ซิงก์อัตโนมัติทุก 30 นาที (อ่านเฉพาะชื่อ แฟ้ม วันที่ ไม่อ่านเนื้อไฟล์)</div>') + '<div class="row">' + goBtn("sync", "🔄 ซิงก์ตอนนี้") + goBtn("work", "📊 หน้าสรุปเต็ม") + "</div>");
       out += card("📅 ดึงย้อนหลังตามช่วงวันที่", '<div class="muted">เลือกช่วงไหนก็ได้ (ไม่เกิน 400 วัน) ไฟล์ที่เคยตัดสินแล้วจะไม่หาย</div><div class="row"><input type="date" id="bfFrom" value="' + pr.from + '"> – <input type="date" id="bfTo" value="' + pr.to + '"></div><div class="row">' + actBtn("backfill", "ดึงช่วงนี้") + '</div><div id="bfSt" class="muted">' + esc(bfMsg) + "</div>");
     } else if (def.id === "Clouddy") {
       var issues = [], acks = acksGet(), loose = items.filter(function (f) { return !f.folder_id && f.decision === "pending"; });
@@ -747,7 +752,7 @@
         '<div class="split" title="ตัดสินแล้ว/ค้าง"><i class="w" style="width:' + pct(st.work.length) + '%"></i><i class="n" style="width:' + pct(st.notWork) + '%"></i><i class="p" style="width:' + pct(st.pending) + '%"></i></div><div class="muted">เป็นงาน ' + st.work.length + " · ไม่ใช่งาน " + st.notWork + " · ค้างตรวจ " + st.pending + "</div>");
       out += card("📊 ไฟล์ต่อวัน", st.bars.length ? '<div class="bars">' + st.bars.map(function (b) { return '<i style="height:' + (st.max ? Math.max(b.n ? 8 : 2, Math.round(b.n * 100 / st.max)) : 2) + '%" title="' + b.d + ": " + b.n + ' ไฟล์"></i>'; }).join("") + '</div><div class="muted bx"><span>' + esc(shortDate(pr.from)) + "</span><span>" + esc(shortDate(st.bars[st.bars.length - 1].d)) + "</span></div>" : '<div class="muted">รอบนี้ยังไม่เริ่ม</div>');
       out += card("🏆 แฟ้มที่ไฟล์เยอะสุด", st.folders.length ? '<table class="sum"><tr><th>แฟ้ม</th><th>ไฟล์</th></tr>' + st.folders.slice(0, 8).map(function (g) { return "<tr><td>" + esc(trunc(g.name, 34)) + "</td><td>" + g.files.length + "</td></tr>"; }).join("") + "</table>" : '<div class="muted">ยังไม่มีไฟล์ที่ตัดสินเป็นงานในรอบนี้</div>');
-      ofCopy = sunnyText(st, pr); out += '<div class="row">' + actBtn("sunny-copy", "📋 คัดลอกสรุปเป็นข้อความ") + goBtn("pending", "📥 ไปตรวจต่อ") + "</div>";
+      ofCopy = sunnyText(st, pr); out += '<div class="row">' + actBtn("sunny-copy", "📋 คัดลอกสรุปเป็นข้อความ") + goBtn("pending", "📥 ไปตรวจต่อ") + goBtn("work", "📊 หน้าสรุปเต็ม") + "</div>";
     } else if (def.id === "Searchy") {
       out += card("🔎 ค้นหาไฟล์ย้อนหลัง", '<input id="ofSearch" class="sinp" placeholder="พิมพ์ชื่อไฟล์หรือชื่อแฟ้ม…" autocomplete="off" autocapitalize="off"><div class="row"><input type="date" id="ofSF" aria-label="ตั้งแต่วันที่"> – <input type="date" id="ofST" aria-label="ถึงวันที่"><select id="ofSS"><option value="new">ใหม่ → เก่า</option><option value="old">เก่า → ใหม่</option></select></div><div id="ofSearchRes">' + searchHtml("") + "</div>");
     } else if (def.id === "Linky") {
@@ -758,6 +763,7 @@
       if (stale.length) out += card("😴 แฟ้มที่ไม่มีการแก้ไขเกิน 14 วัน", stale.map(rowL).join(""));
     } else if (def.id === "Planly") {
       var elapsed = Math.max(0, Math.min(100, Math.round(dayDiff(todayStr(), pr.from) * 100 / Math.max(1, dayDiff(pr.to, pr.from)))));
+      out += '<div class="row">' + goBtn("work", "📊 เปิดหน้าสรุปเต็ม") + "</div>";
       out += card("🌸 นับถอยหลังวันส่ง", '<div class="stat">' + (!isCur ? "รอบ " + esc(periodLabel(pr)) + " (ผ่านมาแล้ว)" : dl > 0 ? "อีก <b>" + dl + "</b> วันถึงวันส่ง (" + esc(shortDate(pr.to)) + ")" : dl === 0 ? "<b>วันนี้วันส่ง!</b>" : "เลยวันส่งมา <b>" + (-dl) + "</b> วัน") + '</div><div class="bar"><i style="width:' + elapsed + '%"></i></div><div class="muted">ผ่านไป ' + elapsed + "% ของรอบ</div>");
       out += card("🗓️ ปฏิทิน", calHtml(items, pr));
       var okPend = status.pending === 0;
@@ -865,8 +871,9 @@
   function ofDecide(btn) {
     var items = ofGroups[btn.dataset.g]; if (!items) return; var row = btn.closest(".item"), bs = [].slice.call(row.querySelectorAll("button"));
     bs.forEach(function (b) { b.disabled = true; });
-    decide(items, btn.dataset.md).then(function () {
-      toast(btn.dataset.md === "work" ? "ตั้งเป็นงานแล้ว" : "ตั้งเป็นไม่ใช่งานแล้ว"); officeData();
+    var cs = row.querySelector(".catSel"), cat = btn.dataset.md === "work" && cs ? cs.value : "";
+    decide(items, btn.dataset.md, cat).then(function () {
+      toast(btn.dataset.md === "work" ? (cat ? "ตั้งเป็นงาน หมวด “" + cat + "” แล้ว" : "ตั้งเป็นงานแล้ว") : "ตั้งเป็นไม่ใช่งานแล้ว"); wk.at = 0; officeData();
       return loadSpiritData(true).then(function (d) { if (ofDef) renderBody(ofDef, d); });
     }).catch(function (e) { toast(e.message); bs.forEach(function (b) { b.disabled = false; }); });
   }
@@ -887,6 +894,108 @@
   }
   setInterval(function () { if (office && view === "office") office.setNight(isNight()); }, 60000);
 
+
+  /* ---------- the full work page: look by category, confirm / move categories, rename, make the PDF (the PC "full page", in one column for the phone) ---------- */
+  var WORK_ICON = '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="7" width="36" height="36" rx="8" fill="#6c8bd6" stroke="#3f5aa3" stroke-width="2.5"/><rect x="11" y="12" width="26" height="26" rx="4" fill="#f3f6ff"/><rect x="15" y="26" width="5" height="9" rx="1.5" fill="#e0457b"/><rect x="23" y="19" width="5" height="16" rx="1.5" fill="#4b64c4"/><rect x="31" y="23" width="4" height="12" rx="1.5" fill="#1f9d6b"/></svg>';
+  var wk = { open: false, data: null, key: "", filter: "all", q: "", at: 0, preAt: 0, busy: false };
+  var WK_COLORS = ["#4b64c4", "#e0457b", "#1f9d6b", "#e08a1e", "#8a4bd0", "#17a2b8", "#c0392b", "#6c8e23", "#b5651d", "#3d7ea6", "#d6559c", "#5d6d7e", "#c2a100", "#2e8b57"];
+  function wkColor(cat) { if (!cat || cat === UNSET) return "#9aa0a6"; var i = wk.data ? wk.data.cats.indexOf(cat) : -1; return WK_COLORS[(i < 0 ? 0 : i) % WK_COLORS.length]; }
+  function wkLoad() {
+    var pr = periodSel(), key = pr.from; wk.busy = true;
+    return api("work_pieces", { from: pr.from, to: pr.to }, 60000).then(function (r) {
+      if (key !== periodSel().from) return; wk.data = r; wk.key = key; wk.at = Date.now(); catCache = r.cats || catCache; lsSet("notedy.cats", catCache); lsSet("notedy.cache.work." + key, r);
+    }).catch(function (e) { if (!authFail(e)) toast(/unknown action/.test(e.message) ? "สคริปต์ยังไม่อัปเดตเป็นเวอร์ชันใหม่" : e.message); }).then(function () { wk.busy = false; });
+  }
+  function wkSummaryCard() {                                     // Minty: categories of the round, tap one to open it on the full page
+    var d = wk.data && wk.key === periodSel().from ? wk.data : null;
+    if (Date.now() - wk.preAt > 60000) { wk.preAt = Date.now(); wkLoad().then(function () { if (ofDef && ofDef.id === "Minty" && ofData && $("office").classList.contains("open")) renderBody(ofDef, ofData); }); }
+    var body;
+    if (!d) body = '<div class="muted">กำลังโหลดหมวด…</div>';
+    else {
+      var cnt = {}; d.pieces.forEach(function (p) { cnt[p.cat] = (cnt[p.cat] || 0) + 1; });
+      var conf = d.pieces.filter(function (p) { return p.assigned; }).length, ks = d.cats.filter(function (c) { return cnt[c]; }); if (cnt[UNSET]) ks.push(UNSET);
+      body = '<div class="muted">ชิ้นงานรอบนี้ ' + d.pieces.length + " ชิ้น · ยืนยันหมวดแล้ว " + conf + "</div>" + (ks.length ? '<div class="chips">' + ks.map(function (c) { return '<button type="button" class="chip" data-go="work:' + esc(encodeURIComponent(c)) + '"><i style="background:' + wkColor(c) + '"></i>' + esc(c) + " <b>" + cnt[c] + "</b></button>"; }).join("") + "</div>" : "") +
+        '<div class="muted">ตอนตรวจแฟ้มด้านบน เลือกหมวดได้ที่ช่อง “หมวด” ข้างปุ่ม ✓ งาน (เว้นไว้ = ให้ระบบแนะนำ)</div>';
+    }
+    return card("🗂️ หมวดงานรอบนี้", body + '<div class="row">' + goBtn("work", "📊 เปิดหน้าสรุปเต็ม") + "</div>");
+  }
+  function openWork(cat) {
+    closeSheet(); var p = $("workPage"); if (!p) { p = document.createElement("div"); p.id = "workPage"; document.body.appendChild(p); }
+    wk.open = true; wk.filter = cat || "all"; wk.q = ""; p.hidden = false; document.body.classList.add("wkOpen");
+    var key = periodSel().from; wk.data = wk.key === key && wk.data ? wk.data : lsGet("notedy.cache.work." + key); wk.key = wk.data ? key : "";
+    wkRender(); wkLoad().then(function () { if (wk.open) wkRender(); });
+  }
+  function closeWork() { wk.open = false; var p = $("workPage"); if (p) { p.hidden = true; p.innerHTML = ""; } document.body.classList.remove("wkOpen"); if (view === "office") { ofDataAt = 0; officeData(); } }
+  function wkVisible() {
+    var d = wk.data, q = wk.q.trim().toLowerCase(); if (!d) return [];
+    return d.pieces.filter(function (p) { return (wk.filter === "all" || p.cat === wk.filter) && (!q || (p.name + " " + p.parent + " " + p.parts.join(" ")).toLowerCase().indexOf(q) >= 0); });
+  }
+  function wkCatSelect(p) {
+    var d = wk.data, cur = p.cat === UNSET ? "" : p.cat;
+    return '<select class="wkCat" data-wkcat="' + esc(p.pid) + '" aria-label="หมวดของชิ้นงาน"><option value="">' + UNSET + "</option>" + d.cats.map(function (c) { return '<option value="' + esc(c) + '"' + (c === cur ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + '<option value="__new">+ หมวดใหม่…</option></select>';
+  }
+  function wkDyn() {
+    var d = wk.data; if (!d) return '<div class="muted">กำลังโหลด…</div>';
+    var cnt = {}; d.pieces.forEach(function (p) { cnt[p.cat] = (cnt[p.cat] || 0) + 1; });
+    var ks = d.cats.slice(); if (cnt[UNSET]) ks.push(UNSET);
+    var h = '<div class="chips"><button type="button" class="chip' + (wk.filter === "all" ? " on" : "") + '" data-wk="chip" data-c="all"><b>ทั้งหมด ' + d.pieces.length + "</b></button>" + ks.map(function (c) { return '<button type="button" class="chip' + (wk.filter === c ? " on" : "") + '" data-wk="chip" data-c="' + esc(c) + '"><i style="background:' + wkColor(c) + '"></i>' + esc(c) + " <b>" + (cnt[c] || 0) + "</b></button>"; }).join("") + "</div>";
+    var vis = wkVisible(), sug = d.pieces.filter(function (p) { return !p.assigned && p.auto !== UNSET; }).length;
+    h += '<div class="wkTools"><div class="muted">ย้ายชิ้นงานที่แสดงอยู่ (' + vis.length + ') ไปหมวด</div><div class="row"><select id="wkMove">' + d.cats.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + "</option>"; }).join("") + '</select><button type="button" class="wkB" data-wk="move"' + (vis.length ? "" : " disabled") + ">ย้าย</button></div>" +
+      '<div class="row"><input id="wkNew" placeholder="ชื่อหมวดใหม่" maxlength="60"><button type="button" class="wkB" data-wk="addcat">เพิ่มหมวด</button></div>' +
+      (sug ? '<div class="row"><button type="button" class="wkB pri" data-wk="confirm">ยืนยันหมวดที่แนะนำทั้งหมด (' + sug + ")</button></div>" : "") + "</div>";
+    if (!vis.length) return h + '<div class="muted" style="padding:14px 0">ไม่มีชิ้นงานในมุมมองนี้</div>';
+    var lastDay = "";
+    vis.forEach(function (p) {
+      if (p.last !== lastDay) { lastDay = p.last; h += '<div class="wkDay">' + esc(longDate(p.last)) + "</div>"; }
+      h += '<div class="wkCard" style="border-left-color:' + wkColor(p.cat) + '"><div class="wkMain"><b>' + esc(p.name) + '</b> <span class="wkN">' + p.files + " ไฟล์</span>" + (p.parent ? ' <small>· ' + esc(p.parent) + "</small>" : "") + (p.assigned ? "" : ' <span class="wkSug">' + (p.auto === UNSET ? "ยังไม่ระบุหมวด" : "แนะนำ") + "</span>") +
+        (p.parts.length ? '<div class="wkParts">' + esc(p.parts.join(", ")) + (p.nparts > p.parts.length ? " …" : "") + "</div>" : "") + '</div><div class="wkSide">' + wkCatSelect(p) + '<div class="wkLk">' + (p.link ? '<a href="' + esc(p.link) + '" target="_blank" rel="noopener">เปิด ↗</a>' : "") + '<button type="button" class="nlink" data-wk="edit" data-pid="' + esc(p.pid) + '">แก้ชื่อ</button></div></div></div>';
+    });
+    return h;
+  }
+  function wkRender() {
+    var p = $("workPage"); if (!p || !wk.open) return; var sc = p.querySelector(".wkScroll"), st = sc ? sc.scrollTop : 0, d = wk.data, pr = periodSel(), list = periodList();
+    var conf = d ? d.pieces.filter(function (x) { return x.assigned; }).length : 0, tot = d ? d.pieces.length : 0, sc100 = Math.round(docScale() * 100);
+    p.innerHTML = '<div class="wkTop"><button type="button" class="wkBack" data-wk="back">← กลับห้อง Notedy</button><small>หน้าทำงานเต็ม: จัดหมวด แก้ชื่อ และสร้าง PDF</small></div><div class="wkScroll">' +
+      "<h1>สรุปงานประจำเดือน " + esc(periodLabel(pr)) + '</h1><div class="wkSub">Graphic Designer : ' + esc(d ? d.designer || "" : "") + ' · เรียงตามวันที่อัปโหลด</div>' +
+      '<div class="wkProg"><span>ยืนยันหมวดแล้ว <b>' + conf + "</b> / " + tot + ' ชิ้นงาน</span><div class="bar"><i style="width:' + (tot ? Math.round(conf * 100 / tot) : 0) + '%"></i></div></div>' +
+      '<div class="row"><select id="wkPer" aria-label="เลือกรอบ">' + list.map(function (x, k) { return '<option value="' + k + '"' + (x.from === pr.from ? " selected" : "") + ">" + esc(periodLabel(x)) + (k === 0 ? " (รอบนี้)" : "") + "</option>"; }).join("") + '</select><button type="button" class="wkB" data-wk="sync">🔄 ดึงงานจาก Drive</button></div>' +
+      '<div class="row"><button type="button" class="wkB pri" data-wk="pdf">📄 สร้าง PDF</button><button type="button" class="wkB" data-wk="scale" data-d="-0.05">A−</button><span class="muted">' + sc100 + '%</span><button type="button" class="wkB" data-wk="scale" data-d="0.05">A+</button></div><div id="wkSt" class="muted"></div>' +
+      '<input id="wkQ" class="wkQ" placeholder="ค้นหาชื่อชิ้นงานหรือรายละเอียด" value="' + esc(wk.q) + '" autocomplete="off"><div id="wkDyn">' + wkDyn() + "</div></div>";
+    if (st) { var n = p.querySelector(".wkScroll"); if (n) n.scrollTop = st; }
+  }
+  function wkRefreshDyn() { var e = $("wkDyn"); if (e) e.innerHTML = wkDyn(); var pr = document.querySelector("#workPage .wkProg"); if (pr && wk.data) { var c = wk.data.pieces.filter(function (x) { return x.assigned; }).length, t = wk.data.pieces.length; pr.innerHTML = "<span>ยืนยันหมวดแล้ว <b>" + c + "</b> / " + t + ' ชิ้นงาน</span><div class="bar"><i style="width:' + (t ? Math.round(c * 100 / t) : 0) + '%"></i></div>'; } }
+  function wkSt(t) { var e = $("wkSt"); if (e) e.textContent = t; }
+  function wkAssign(list, msg) {                                  // list: [{pid, cat}] — update at once, save behind it
+    var by = {}; wk.data.pieces.forEach(function (p) { by[p.pid] = p; });
+    list.forEach(function (x) { var p = by[x.pid]; if (!p) return; p.cat = x.cat || UNSET; p.assigned = !!x.cat; if (x.cat && wk.data.cats.indexOf(x.cat) < 0) wk.data.cats.push(x.cat); });
+    wkRefreshDyn(); lsSet("notedy.cache.work." + wk.key, wk.data);
+    var chunks = []; for (var i = 0; i < list.length; i += 300) chunks.push(list.slice(i, i + 300));
+    var pr = Promise.resolve(); chunks.forEach(function (c) { pr = pr.then(function () { return api("assign_many", { items: c }, 60000); }); });
+    pr.then(function () { if (msg) toast(msg); }).catch(function (e) { if (!authFail(e)) { toast("บันทึกไม่สำเร็จ: " + e.message); wkLoad().then(wkRender); } });
+  }
+  function wkAct(b) {
+    var a = b.dataset.wk, d = wk.data;
+    if (a === "back") closeWork();
+    else if (a === "chip") { wk.filter = b.dataset.c; wkRefreshDyn(); }
+    else if (a === "sync") { wkSt("กำลังซิงก์ Drive…"); api("sync").then(function (r) { wkSt(r.ok === false ? "ซิงก์ไม่สำเร็จ: " + r.error : "ซิงก์แล้ว"); return wkLoad(); }).then(function () { wkRender(); }).catch(function (e) { if (!authFail(e)) wkSt(e.message); }); }
+    else if (a === "scale") { var v = Math.round(Math.min(1.2, Math.max(0.8, docScale() + parseFloat(b.dataset.d))) * 100) / 100; lsSet("notedy.docScale", v); wkRender(); }
+    else if (a === "pdf") {
+      var pr = periodSel(); b.disabled = true; wkSt("กำลังสร้าง PDF… (ครั้งแรกอาจใช้เวลา 10–30 วินาที)");
+      api("pdf", { from: pr.from, to: pr.to, scale: docScale() }, 170000).then(function (r) { wkSt("สร้างแล้ว: " + r.folders + " ชิ้นงาน · " + r.files + " ไฟล์ — เลือก “บันทึกลงไฟล์” ในหน้าที่เปิดขึ้น"); return saveBlob(toBlob(r.b64, "application/pdf"), r.filename, "application/pdf"); })
+        .catch(function (e) { if (!authFail(e)) wkSt("⚠️ " + e.message); }).then(function () { b.disabled = false; });
+    } else if (!d) return;
+    else if (a === "move") { var to = $("wkMove").value, vis = wkVisible(); if (!to || !vis.length) return; if (vis.length > 1 && !confirm("ย้าย " + vis.length + " ชิ้นงานไปหมวด “" + to + "” ?")) return; wkAssign(vis.map(function (p) { return { pid: p.pid, cat: to }; }), "ย้าย " + vis.length + " ชิ้นงานแล้ว"); }
+    else if (a === "confirm") { var sg = d.pieces.filter(function (p) { return !p.assigned && p.auto !== UNSET; }); wkAssign(sg.map(function (p) { return { pid: p.pid, cat: p.auto }; }), "ยืนยันหมวดแล้ว " + sg.length + " ชิ้นงาน"); }
+    else if (a === "addcat") { var nm = ($("wkNew").value || "").trim(); if (!nm) { toast("พิมพ์ชื่อหมวดก่อน"); return; } if (d.cats.indexOf(nm) >= 0) { toast("มีหมวดนี้แล้ว"); return; }
+      d.cats.push(nm); catCache = d.cats; lsSet("notedy.cats", catCache); wkRefreshDyn(); api("pdfcfg_set", { kind: "cat", key: nm, val: "1" }).then(function () { toast("เพิ่มหมวดแล้ว"); }).catch(function (e) { if (!authFail(e)) toast(e.message); }); }
+    else if (a === "edit") {
+      var p = d.pieces.filter(function (x) { return x.pid === b.dataset.pid; })[0]; if (!p) return;
+      var nn = prompt("ชื่อชิ้นงานที่จะแสดงใน PDF (เว้นว่าง = ใช้ชื่อแฟ้มเดิม)", p.name); if (nn == null) return; nn = nn.trim();
+      var ed = Object.assign({}, p.ed || {}); if (nn) ed.name = nn; else delete ed.name;
+      api("pdfcfg_set", { kind: "edit", key: p.pid, val: Object.keys(ed).length ? JSON.stringify(ed) : "" }).then(function () { return wkLoad(); }).then(function () { wkRender(); toast("แก้แล้ว"); }).catch(function (e) { if (!authFail(e)) toast(e.message); });
+    }
+  }
+
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
     var t = e.target;
@@ -898,7 +1007,7 @@
     var sp = t.closest("#ofStrip [data-sp]"); if (sp) { var cc = ofAssets.chars.filter(function (c) { return c.id === sp.dataset.sp; })[0]; if (cc && Office.BY[cc.id]) openSheet(Office.BY[cc.id], cc); return; }
     if (t.closest("#menuBtn")) { $("ofMenu").hidden = false; $("mQrBox").hidden = true; $("mKeyBox").hidden = true; $("mNotifyBox").hidden = true; $("mClearBox").hidden = true; return; }
     if (t.closest("#ofHandle")) { openQuick(); return; }
-    var qk = t.closest("#ofQuick [data-q]"); if (qk) { $("ofQuick").hidden = true; var qv = qk.dataset.q; if (qv === "pending") openPending(); else if (qv === "day") openNote(); else { $("ofMenu").hidden = false; $("mQrBox").hidden = true; $("mKeyBox").hidden = true; $("mNotifyBox").hidden = true; $("mClearBox").hidden = true; } return; }
+    var qk = t.closest("#ofQuick [data-q]"); if (qk) { $("ofQuick").hidden = true; var qv = qk.dataset.q; if (qv === "pending") openPending(); else if (qv === "day") openNote(); else if (qv === "work") openWork(); else { $("ofMenu").hidden = false; $("mQrBox").hidden = true; $("mKeyBox").hidden = true; $("mNotifyBox").hidden = true; $("mClearBox").hidden = true; } return; }
     if (t.id === "ofQuick") { t.hidden = true; return; }
     if (t.closest("#ofPeriodBtn")) { openPeriodMenu(); return; }
     var pp = t.closest("#ofPeriodList [data-per]"); if (pp) { pickPeriod(+pp.dataset.per); return; }
@@ -910,7 +1019,7 @@
     if (t.closest("#mClear")) { $("mClearBox").hidden = !$("mClearBox").hidden; return; }
     if (t.closest("#mClearGo")) { clearChats(); return; }
     var ba = t.closest("#ofBody [data-act]"); if (ba) { bodyAct(ba); return; }
-    var go = t.closest("#ofBody [data-go]"); if (go) { var gv = go.dataset.go; closeSheet(); if (gv === "sync") syncNow(); else if (gv === "day") openNote(); else if (gv === "pending") openPending(); else { view = gv; renderShell(); load(); } return; }
+    var go = t.closest("#ofBody [data-go]"); if (go) { var gv = go.dataset.go; closeSheet(); if (gv === "sync") syncNow(); else if (gv === "day") openNote(); else if (gv === "pending") openPending(); else if (gv.indexOf("work") === 0) openWork(gv.length > 5 ? decodeURIComponent(gv.slice(5)) : ""); else { view = gv; renderShell(); load(); } return; }
     var md = t.closest("#ofBody [data-md]"); if (md) { ofDecide(md); return; }
     if (t.closest("#ofChatBar")) { setChatCollapsed(!chatCollapsed); return; }
     if (t.closest("#mKey") || t.closest("[data-key]")) { openKeyBox(); return; }
@@ -923,6 +1032,8 @@
     if (cb) { var ck = cb.dataset.chat; if (ck === "act") chatAct(cb.dataset.eid, +cb.dataset.ai); else if (ck === "openkey") openKeyBox(); return; }
     if (t.closest("#fxClose") || t.id === "ofAsk") { fxUserClose(); return; }
     if (t.closest("#fxAgain")) { if (fx.item) replay([fx.item]); return; }
+    if (t.closest("[data-wkopen]")) { openWork(); return; }
+    var wb = t.closest("#workPage [data-wk]"); if (wb) { wkAct(wb); return; }
     if (t.closest("[data-note]")) { openNote(); return; }
     if (t.closest("#noteBack") || t.id === "noteWrap") { closeNote(); return; }
     var nav = t.closest("[data-nav]"); if (nav && !nav.disabled) { var nd = addDays(day, +nav.dataset.nav); if (nd <= todayStr()) { day = nd; if (noteOpen) loadNote(); else load(); } return; }
@@ -946,10 +1057,15 @@
     if (t.value.length < 6) return;
     if ($("app").dataset.pin === "create") { if (t.id === "pinA") $("pinB").focus(); else submitPin(); } else submitPin();
   });
-  document.addEventListener("input", function (e) { var id = e.target && e.target.id; if (id === "ofSearch") searchRefresh(); });
+  document.addEventListener("input", function (e) { var id = e.target && e.target.id; if (id === "ofSearch") searchRefresh(); else if (id === "wkQ") { wk.q = e.target.value; wkRefreshDyn(); } });
   document.addEventListener("change", function (e) {
     var t = e.target; if (!t) return;
     if (t.id === "ofSF" || t.id === "ofST" || t.id === "ofSS") searchRefresh();
+    else if (t.id === "wkPer") { var lst = periodList(), k = +t.value; ofPer = k === 0 ? null : lst[k]; headerOffice(); wk.at = 0; var key = periodSel().from; wk.data = lsGet("notedy.cache.work." + key); wk.key = wk.data ? key : ""; wkRender(); wkLoad().then(function () { if (wk.open) wkRender(); }); }
+    else if (t.dataset && t.dataset.wkcat !== undefined) {
+      var cat = t.value; if (cat === "__new") { cat = (prompt("ชื่อหมวดใหม่") || "").trim(); if (!cat) { wkRefreshDyn(); return; } }
+      wkAssign([{ pid: t.dataset.wkcat, cat: cat }], cat ? "ย้ายไป “" + cat + "” แล้ว" : "เอาออกจากหมวดแล้ว");
+    }
     else if (t.dataset && t.dataset.pdassign !== undefined) {
       var pid = t.dataset.pdassign, val = t.value;
       if (val === "__new") { val = (prompt("ชื่อหมวดใหม่") || "").trim(); if (!val) { t.value = ""; return; } }
