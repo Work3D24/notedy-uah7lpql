@@ -361,3 +361,8 @@ body.wkOpen{overflow:hidden}
 .tChk,.tOpts label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6a4f35;margin-top:8px}.tChk input,.tOpts input{width:18px;height:18px;accent-color:#4aa57a}
 .tOpts{display:flex;flex-wrap:wrap;gap:4px 12px}
 #ofSheet .phead .x#ofZ{font-size:18px}
+
+/* ---- Backy x Newnew love story ---- */
+.lvHearts{display:flex;gap:2px;justify-content:center;font-size:21px;margin:2px 0 6px}.lvHearts span{color:#e6dde3}.lvHearts span.on{color:#e0457b;text-shadow:0 0 8px #ff9bb888}.lvHearts span.half{color:#f3a8c0}
+.lvCh{border-top:1px solid #eeeaf6;padding:6px 0;font-size:13.5px}.lvCh summary{font-weight:700;cursor:pointer}.lvCh p{margin:6px 0 2px;line-height:1.65;color:#5a5490}
+.lvLock{border-top:1px solid #eeeaf6;padding:8px 0;font-size:13px;color:#a8a4c4}

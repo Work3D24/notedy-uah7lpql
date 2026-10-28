@@ -325,7 +325,7 @@
   var sleepFor = null;
   function openSleepMenu(def, asset, el) {
     var m = $("ofSleepMenu"), o = $("office"); if (!m || !o) return; sleepFor = def.id; var r = el.getBoundingClientRect(), ob = o.getBoundingClientRect(), s = asleep(def.id);
-    m.innerHTML = '<button type="button" data-sl="toggle">' + (s ? "⏰ ปลุก" : "😴 ให้") + esc(def.th) + (s ? "" : "นอน") + '</button><button type="button" data-sl="open">เปิดหน้าของ' + esc(def.th) + "</button>";
+    m.innerHTML = '<button type="button" data-sl="toggle">' + (s ? "⏰ ปลุก" : "😴 ให้") + esc(def.th) + (s ? "" : "นอน") + '</button>' + (def.id === "Backy" || def.id === "Newnew" ? '<button type="button" data-sl="love">💘 ให้' + esc(def.th) + "จีบ" + esc(peerName(def.id === "Backy" ? "Newnew" : "Backy")) + "</button>" : "") + '<button type="button" data-sl="open">เปิดหน้าของ' + esc(def.th) + "</button>";
     m.hidden = false; var w = m.offsetWidth || 170; m.style.left = Math.max(8, Math.min(ob.width - w - 8, r.left - ob.left + r.width / 2 - w / 2)) + "px"; m.style.top = Math.max(70, r.top - ob.top + r.height * 0.25) + "px";
     try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) { /* no haptics */ }
   }
@@ -569,19 +569,19 @@
       '</div><div class="fxCap" id="fxCap"></div><div class="fxFoot"><button class="fxAgain" id="fxAgain" type="button" hidden>↻ ดูอีกครั้ง</button></div><div class="fxBar" id="fxBar" hidden></div>' + hearts + "</div>";
   }
   function chImg(id) { var c = ofAssets && ofAssets.chars.filter(function (x) { return x.id === id; })[0]; return c && office ? office.u(c.day) : ""; }
-  function fxStart(a, b, q) {
+  function fxStart(a, b, q, cap) {
     fxBuild(); clearTimeout(fx.closeT); var ta = theme(a), tb = theme(b);
     $("fxCard").style.background = "linear-gradient(100deg," + (ta.card || ta.s) + " 0 50%," + (tb.card || tb.s) + " 50% 100%)";
     $("fxAImg").src = chImg(a); $("fxBImg").src = chImg(b); $("fxAName").textContent = peerName(a); $("fxBName").textContent = peerName(b);
     var ab = $("fxABub"); ab.textContent = trunc(q, 110); ab.style.animation = "none"; void ab.offsetWidth; ab.style.animation = "";
     var bb = $("fxBBub"); bb.className = "fxBub typing"; bb.innerHTML = "<i></i><i></i><i></i>";
-    $("fxCap").textContent = peerName(a) + " กำลังวิ่งไปถาม" + peerName(b) + "…"; $("fxBar").hidden = true; $("fxAgain").hidden = true; $("ofAsk").hidden = false;
+    $("fxCap").textContent = cap || (peerName(a) + " กำลังวิ่งไปถาม" + peerName(b) + "…"); $("fxBar").hidden = true; $("fxAgain").hidden = true; $("ofAsk").hidden = false;
     fx.on = true; fx.since = Date.now(); fx.answered = false; fx.peer = b;
   }
-  function fxAnswer(text, auto) {
+  function fxAnswer(text, auto, cap) {
     if (!fx.on) return;
     var bb = $("fxBBub"); bb.className = "fxBub"; bb.textContent = trunc(text, 110); bb.style.animation = "none"; void bb.offsetWidth; bb.style.animation = "";
-    $("fxCap").textContent = peerName(fx.peer) + "ตอบแล้ว! กำลังวิ่งกลับไปบอก…"; fx.answered = true; fx.answeredAt = Date.now();
+    $("fxCap").textContent = cap || (peerName(fx.peer) + "ตอบแล้ว! กำลังวิ่งกลับไปบอก…"); fx.answered = true; fx.answeredAt = Date.now();
     var bar = $("fxBar"); bar.hidden = false; bar.style.animation = "none"; void bar.offsetWidth; bar.style.animation = "fxBar " + HOLD_MS + "ms linear forwards"; $("fxAgain").hidden = false;
     if (auto) { clearTimeout(fx.closeT); fx.closeT = setTimeout(fxAutoHide, HOLD_MS); }
   }
@@ -598,8 +598,8 @@
     fxBuild(); fxReset(); var tok = ++fx.token, i = 0;
     function next() {
       if (tok !== fx.token || i >= list.length) return;
-      var it = list[i++]; fx.item = it; fx.userClosed = false; fxStart(it.a, it.b, it.q); fx.chainNext = i < list.length ? next : null;
-      fx.replayT = setTimeout(function () { if (tok === fx.token && fx.on) fxAnswer(it.ans, true); }, 1700);
+      var it = list[i++]; fx.item = it; fx.userClosed = false; fxStart(it.a, it.b, it.q, it.cap1); fx.chainNext = i < list.length ? next : null;
+      fx.replayT = setTimeout(function () { if (tok === fx.token && fx.on) fxAnswer(it.ans, true, it.cap2); }, 1700);
     }
     next();
   }
@@ -830,10 +830,10 @@
       var okPend = status.pending === 0;
       out += card("🎀 แผนแนะนำก่อนวันส่ง", [["3 วันก่อน", "ซิงก์ Drive และตรวจแฟ้มที่ค้างให้หมด", okPend], ["2 วันก่อน", "ให้คราวดี้ตรวจความถูกต้อง", false], ["1 วันก่อน", "สร้าง PDF ร่างที่นิวนิว", false], ["วันส่ง", "สร้าง PDF ฉบับจริงแล้วส่ง HR", false]].map(function (x) { return '<div class="item"><div class="nm"><b>' + (x[2] ? "✅ " : "⬜ ") + x[1] + "</b><small>" + x[0] + "</small></div></div>"; }).join(""));
     } else if (def.id === "Newnew" || def.id === "Drawy") {
-      out += pdfBlock(def, d);
+      out += pdfBlock(def, d); if (def.id === "Newnew") out += loveCard();
     } else if (def.id === "Backy") {
       out += card("💾 สำรองข้อมูล", '<div class="muted">ข้อมูลทั้งหมดของแอปนี้เก็บอยู่ใน Google Sheet “Notedy Cloud” ของคุณเองอยู่แล้ว (มีประวัติเวอร์ชันของ Google) ส่งออกคิวไฟล์เป็น CSV เก็บไว้ในโทรศัพท์ได้ที่นี่</div><div class="row">' + actBtn("csv", "⬇ ส่งออกคิวเป็น CSV") + "</div>" + '<div id="csvSt" class="muted">' + esc(csvMsg) + "</div>");
-      out += pdfBlock({ id: "Backy" }, d);
+      out += pdfBlock({ id: "Backy" }, d); out += loveCard();
     } else if (def.id === "Buddy") {
       out += card("🐱 ทิปการใช้แอป", '<ul class="chk"><li>แตะภูติแต่ละตัวเพื่อดูงานของตัวนั้น</li><li>มินตี้ตัดสินแฟ้มค้างตรวจได้เลย (✓ งาน / ✕ ไม่ใช่)</li><li>โน๊ตดี้สรุปรอบ เสิร์ชชี่ค้นไฟล์ ซันนี่ทำสถิติ แพลนลี่มีปฏิทิน นิวนิวสร้าง PDF</li><li>⚙ เมนู: ซิงก์, QR, ใส่ key, แจ้งเตือน, ล้างประวัติแชต</li></ul>');
       out += '<div class="row">' + FAQ.map(function (f, i) { return '<button type="button" class="dbtn ok" data-act="faq" data-i="' + i + '">' + esc(f.q) + "</button>"; }).join("") + '</div><div class="row"><input id="bq" class="sinp" placeholder="พิมพ์คำถาม เช่น ลืมรหัส" autocomplete="off">' + actBtn("ask", "ถาม") + '</div><div id="bres"></div>';
@@ -852,6 +852,7 @@
   function copyText(txt) { return (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast("คัดลอกแล้ว"); }, function () { toast("คัดลอกไม่ได้ ลองเลือกข้อความเอง"); }); }
   function bodyAct(b) {
     var a = b.dataset.act;
+    if (a === "love") { loveFlirt(b.dataset.from); return; }
     if (a === "minty-all") {
       if (!mintyArm) { mintyArm = setTimeout(function () { mintyArm = null; if (ofDef && ofData) renderBody(ofDef, ofData); }, 4000); renderBody(ofDef, ofData); return; }
       clearTimeout(mintyArm); mintyArm = null;
@@ -1057,6 +1058,65 @@
     }
   }
 
+
+  /* ---------- Backy x Newnew: a secret little love story (pure flavour, nothing to do with work). The score is kept in the cloud script. ---------- */
+  var LOVE_AT = [0, 15, 35, 55, 75, 100];
+  var LOVE_STAGES = ["แอบมองไกลๆ", "เขินเวลาเจอกัน", "ชวนคุยดึกๆ", "แอบให้ของขวัญ", "ใกล้ชิดกัน", "คู่ใจ"];
+  var LOVE_CHAPTERS = [
+    ["ตู้เซิร์ฟเวอร์ข้างโต๊ะนิวนิว", "ทุกเดือนนิวนิวต้องสร้างรายงานเล่มใหญ่ และทุกเดือนแบ็กกี้จะแอบเดินผ่านโต๊ะนิวนิวโดยอ้างว่า “ตรวจตู้สำรองข้อมูล” ทั้งที่ตู้อยู่ฝั่งตรงข้ามห้อง แมวดำในหมวกของแบ็กกี้ชอบหันไปมองนิวนิวก่อนเจ้าของเสมอ"],
+    ["โฟลเดอร์ลับชื่อ “ห้ามลบ”", "แบ็กกี้เริ่มสำรองไฟล์ของนิวนิวไว้สองชุดโดยไม่บอกใคร และตั้งชื่อโฟลเดอร์ว่า “ห้ามลบ” เวลาเจอกัน นิวนิวมักทำเป็นยุ่งกับกองกระดาษ แต่ปลายหูแมวบนหมวกกลับกระดิกทุกที"],
+    ["คืนที่ไฟในห้องเหลือแค่ดวงเดียว", "คืนหนึ่งงานเสร็จดึก ทั้งสองคนเหลืออยู่ในห้องสองคน นิวนิวชวนแบ็กกี้ดูพระจันทร์ผ่านหน้าต่างบานใหญ่ แบ็กกี้ถือโคมไฟมานั่งข้างๆ ไม่ได้พูดอะไรเลย แต่ก็ไม่ยอมกลับไปก่อน"],
+    ["ของขวัญที่ไม่กล้าส่ง", "นิวนิวปักถุงผ้ารูปแมวดำจนนิ้วแดง แบ็กกี้ทำจุดกู้คืนชื่อนิวนิวไว้ในระบบ ทั้งคู่ถือของขวัญเดินวนรอบห้องคนละทางแล้วบังเอิญเจอกันตรงกลาง… ต่างคนต่างซ่อนของไว้ข้างหลัง แล้วยื่นให้พร้อมกัน"],
+    ["จับมือกันตอนระบบรวน", "วันที่ระบบรวน ไฟกระพริบทั้งห้อง นิวนิวตกใจจับมือแบ็กกี้ไว้แน่น แบ็กกี้ที่ปกติมือเย็นเพราะอยู่กับเซิร์ฟเวอร์ กลับรู้สึกอุ่นขึ้นทั้งตัว ตอนไฟกลับมา ไม่มีใครยอมปล่อยมือก่อน"],
+    ["ซิงก์สำเร็จ 100%", "แบ็กกี้บอกว่าสำรองได้ทุกอย่างยกเว้นหัวใจที่ไม่ยอมเงียบ นิวนิวบอกว่ารายงานทุกฉบับมีชื่อแบ็กกี้ซ่อนอยู่ในหัวกระดาษ ตั้งแต่วันนั้นสองคนนั่งโต๊ะติดกัน และทุกครั้งที่ภูติตัวอื่นแซว ทั้งคู่ก็หน้าแดงพร้อมกัน 💞"]
+  ];
+  var LOVE_LINES = {                                              /* [line by the flirter, answer of the other] per stage */
+    Backy: [
+      [["นิวนิว… รายงานเดือนนี้สวยดีนะ (แอบมองอยู่ตั้งนานแล้ว)", "เอ๊ะ แบ็กกี้เห็นด้วยเหรอ ขอบใจนะ…"], ["ฉันสำรองไฟล์ของนิวนิวไว้ให้แล้ว ไม่ต้องกลัวหาย", "แบ็กกี้ใจดีจัง… (ปลายหูแดงไปหมดแล้ว)"]],
+      [["ถ้านิวนิวเหนื่อย มานั่งพักข้างตู้เซิร์ฟเวอร์ก็ได้นะ ตรงนั้นอุ่นดี", "หน้าแบ็กกี้แดงนะ… หรือเพราะเซิร์ฟเวอร์ร้อน?"], ["ฉันมีโฟลเดอร์ลับชื่อ “ห้ามลบ” เก็บของนิวนิวไว้", "โอ๊ย ใจเต้นแรงกว่าตอนสร้าง PDF 600 หน้าอีก"]],
+      [["ดึกแล้ว นิวนิวยังไม่นอนเหรอ ฉันนั่งเฝ้าให้ก็ได้", "งั้นอยู่เป็นเพื่อนนะ ห้ามหลับก่อนฉัน"], ["ถ้าวันไหนไฟล์หายหมด ขอแค่นิวนิวไม่หายไปจากฉันก็พอ", "พูดอะไรเนี่ย… ฉันไม่ไปไหนหรอก"]],
+      [["ฉันแอบทำสำเนารอยยิ้มของนิวนิวไว้… (หมายถึงรูปในรายงานนะ!)", "สำเนารอยยิ้มเหรอ งั้นขอต้นฉบับคืนด้วย 😳"], ["ฉันสร้างจุดกู้คืนชื่อนิวนิวไว้แล้ว ใครก็ลบไม่ได้", "แบ็กกี้… ไม่ต้องกู้หรอก ใจฉันอยู่ตรงนี้แล้ว"]],
+      [["ถ้าต้องสำรองอย่างเดียว ฉันขอสำรองวันธรรมดาๆ ที่มีนิวนิวนั่งอยู่ข้างๆ", "งั้นเราสร้างวันธรรมดาด้วยกันอีกเยอะๆ นะ"], ["จับมือหน่อยได้ไหม มือฉันเย็นเพราะอยู่กับเซิร์ฟเวอร์", "มือฉันอุ่นพอดี… มานี่"]],
+      [["ซิงก์สำเร็จ 100% ใจของฉันกับของนิวนิว", "แบ็กกี้… ไม่มีคอนฟลิกต์เลยสักไฟล์ 💞"], ["ต่อให้ระบบล่ม ฉันจะกู้ใจนิวนิวเป็นอย่างแรก", "และฉันจะออกรายงานเรื่องของเราฉบับสมบูรณ์เลย"]]
+    ],
+    Newnew: [
+      [["แบ็กกี้ แฟ้มที่แบ็กกี้ดูแลเรียบร้อยจังเลยนะ", "…ก็แค่หน้าที่ (หูแอบแดง)"], ["ชงกาแฟมาให้ ดื่มหน่อยไหม", "ขอบใจ… ไม่ต้องก็ได้ แต่ก็รับไว้"]],
+      [["ฉันทำรายงานฉบับพิเศษให้แบ็กกี้คนเดียว ไม่มีใครเห็นเลย", "ห้ามให้ใครเห็นนะ ฉันจะเก็บไว้เอง"], ["แมวในหมวกของแบ็กกี้ ขอลูบหูได้ไหม", "…ลูบได้นิดเดียวนะ"]],
+      [["คืนนี้พระจันทร์สวยนะ ไปดูด้วยกันไหม", "ฉันถือโคมไฟ นิวนิวถือขนมมาด้วยนะ"], ["ถ้าแบ็กกี้เหงา เรียกฉันได้เสมอ แม้ไม่มีงาน", "ได้ยินแล้ว ฉันจะเรียกแน่"]],
+      [["ฉันเขียนชื่อแบ็กกี้ไว้ในหัวกระดาษทุกใบเลย", "ระวังนะ ถ้าใครเห็น ฉันจะหน้าแดงไปทั้งปี"], ["ถุงผ้าปักรูปแมวดำใบนี้ ฉันปักเอง ให้แบ็กกี้", "สวยมาก… ฉันจะไม่ลืมเลยสักวัน"]],
+      [["อิงไหล่หน่อยนะ วันนี้เหนื่อย", "ไหล่ฉันแข็งแรงที่สุดในระบบ มานี่"], ["ถ้าแบ็กกี้ยิ้มบ่อยๆ ฉันจะทำ PDF ชื่อ “รอยยิ้มของแบ็กกี้”", "งั้นฉันจะยิ้มให้ทุกหน้าเลย"]],
+      [["รายงานฉบับสุดท้ายของเดือนนี้ หัวข้อ: เรา", "ขอเป็นผู้สำรองหน้าแรกเลยนะ 💞"], ["ใครจะคิดว่าคนเก็บของสำรองจะเก็บหัวใจใครได้", "ฉันไม่ได้สำรองไว้… ฉันเก็บไว้ตลอดไปต่างหาก"]]
+    ]
+  };
+  var love = null, loveAt = 0, loveBusy = false;
+  function loveStage(score) { var s = 0; LOVE_AT.forEach(function (t, i) { if (score >= t) s = i; }); return s; }
+  function loveLoad(force) {
+    if (!force && love && Date.now() - loveAt < 30000) return;
+    loveAt = Date.now(); api("love_get").then(function (r) { love = r; if (ofDef && (ofDef.id === "Backy" || ofDef.id === "Newnew") && ofData && $("office").classList.contains("open")) renderBody(ofDef, ofData); }).catch(function () { /* the card just stays hidden */ });
+  }
+  function loveCard() {
+    loveLoad(false); if (!love) return "";
+    var sc = love.score, st = loveStage(sc), hearts = "";
+    for (var i = 0; i < 10; i++) hearts += '<span class="' + (sc >= (i + 1) * 10 ? "on" : sc >= i * 10 + 5 ? "half" : "") + '">♥</span>';
+    var chapters = LOVE_CHAPTERS.map(function (c, i) { return i <= st ? '<details class="lvCh"><summary>📖 บทที่ ' + (i + 1) + " · " + esc(c[0]) + "</summary><p>" + esc(c[1]) + "</p></details>" : '<div class="lvLock">🔒 บทที่ ' + (i + 1) + " · ปลดที่ " + LOVE_AT[i] + " แต้ม</div>"; }).join("");
+    return card("💕 แอบชอบกัน · แบ็กกี้ × นิวนิว", '<div class="lvHearts">' + hearts + '</div><div class="stat"><b>' + sc + '</b> / 100 · ' + esc(LOVE_STAGES[st]) + '</div><div class="bar"><i style="width:' + sc + '%;background:linear-gradient(90deg,#ff9bb8,#e0457b)"></i></div>' +
+      '<div class="muted">ความลับของสองคนนี้ ไม่เกี่ยวกับงาน — ให้ตัวไหนเข้าไปจีบ ความสัมพันธ์ก็เพิ่มขึ้น (' + love.flirts + " ครั้งแล้ว)</div>" +
+      '<div class="row">' + actBtn("love", "💘 ให้แบ็กกี้จีบนิวนิว", ' data-from="Backy"') + actBtn("love", "💘 ให้นิวนิวจีบแบ็กกี้", ' data-from="Newnew"') + "</div>" + chapters);
+  }
+  function loveFlirt(from) {
+    if (loveBusy || !office) return; loveBusy = true; var to = from === "Backy" ? "Newnew" : "Backy";
+    api("love_flirt", { from: from }).then(function (r) {
+      var oldSt = loveStage(r.before), pairs = LOVE_LINES[from][oldSt], pr = pairs[Math.floor(Math.random() * pairs.length)];
+      love = { ok: true, score: r.score, flirts: r.flirts }; loveAt = Date.now();
+      var it = { a: from, b: to, q: pr[0], ans: pr[1], cap1: peerName(from) + " แอบเข้าไปจีบ" + peerName(to) + "… 💕", cap2: peerName(to) + "ได้ยินแล้ว หน้าแดงเลย! 💗" };
+      closeSheet(); fx.item = it; fx.userClosed = false; fxStart(it.a, it.b, it.q, it.cap1);
+      setTimeout(function () { if (fx.on && fx.item === it) fxAnswer(it.ans, true, it.cap2); }, 1700);
+      var ns = loveStage(r.score); toast(r.delta ? "ความสัมพันธ์ +" + r.delta + " 💕" : "รักกันเต็มที่แล้ว 💞");
+      if (ns > oldSt) setTimeout(function () { toast("ปลดล็อกเรื่องราวบทใหม่ 📖 “" + LOVE_CHAPTERS[ns][0] + "”"); }, 2600);
+      if (ofDef && (ofDef.id === "Backy" || ofDef.id === "Newnew") && ofData) renderBody(ofDef, ofData);
+    }).catch(function (e) { if (!authFail(e)) toast(/unknown action/.test(e.message) ? "สคริปต์ยังไม่อัปเดตเป็นเวอร์ชันใหม่" : e.message); }).then(function () { loveBusy = false; });
+  }
+
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
     var t = e.target;
@@ -1094,7 +1154,7 @@
     if (t.closest("#fxClose") || t.id === "ofAsk") { fxUserClose(); return; }
     if (t.closest("#fxAgain")) { if (fx.item) replay([fx.item]); return; }
     var sm = t.closest("#ofSleepMenu [data-sl]");
-    if (sm) { var sid = sleepFor, sdef = Office.BY[sid]; $("ofSleepMenu").hidden = true; if (sm.dataset.sl === "toggle") { setSleepOne(sid, !asleep(sid)); toast(asleep(sid) ? (sdef ? sdef.th : sid) + "หลับแล้ว 💤" : "ปลุกแล้ว"); } else { var ac = ofAssets && ofAssets.chars.filter(function (c) { return c.id === sid; })[0]; if (ac && sdef) openSheet(sdef, ac); } return; }
+    if (sm) { var sid = sleepFor, sdef = Office.BY[sid]; $("ofSleepMenu").hidden = true; if (sm.dataset.sl === "love") { loveFlirt(sid); } else if (sm.dataset.sl === "toggle") { setSleepOne(sid, !asleep(sid)); toast(asleep(sid) ? (sdef ? sdef.th : sid) + "หลับแล้ว 💤" : "ปลุกแล้ว"); } else { var ac = ofAssets && ofAssets.chars.filter(function (c) { return c.id === sid; })[0]; if (ac && sdef) openSheet(sdef, ac); } return; }
     var smo = $("ofSleepMenu"); if (smo && !smo.hidden && !t.closest("#ofSleepMenu")) smo.hidden = true;
     if (t.closest("#ofZ")) { if (ofSpirit) { setSleepOne(ofSpirit, !asleep(ofSpirit)); toast(asleep(ofSpirit) ? "หลับแล้ว 💤" : "ปลุกแล้ว"); } return; }
     if (t.closest("#sleepAll")) { Office.ROSTER.forEach(function (r) { sleepCfg.ov[r.id] = { v: 1, until: isDark() ? nextWake() : Date.now() + 4 * 3600e3 }; }); saveSleep(); applySleep(); toast("ให้ทุกตัวนอนแล้ว 💤"); return; }
