@@ -1,14 +1,14 @@
 /* Notedy cloud PWA: cache the app shell so it opens instantly; the Google script API is never cached. */
-var CACHE = "notedy-cloud-v10";
+var CACHE = "notedy-cloud-v11";
 var SHELL = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-64.png", "assets/Notedy.png", "assets/Drivee.png", "office/office.css", "office/office_render.js", "office/assets.json", "qr.js"];
-self.addEventListener("install", function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); })); self.skipWaiting(); });
+self.addEventListener("install", function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL.map(function (u) { return new Request(u, { cache: "reload" }); })); })); self.skipWaiting(); });
 self.addEventListener("activate", function (e) {
   e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); }));
 });
 self.addEventListener("fetch", function (e) {
   var u = new URL(e.request.url);
   if (e.request.method !== "GET" || u.origin !== location.origin) return;
-  e.respondWith(fetch(e.request).then(function (r) { if (r.ok) { var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, copy); }); } return r; }).catch(function () { return caches.match(e.request); }));
+  e.respondWith(fetch(e.request, { cache: "no-cache" }).then(function (r) { if (r.ok) { var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, copy); }); } return r; }).catch(function () { return caches.match(e.request); }));
 });
 
 /* ---------- Web Push: the script sends an EMPTY push; we ask it how many folders are new (counts only, never names) and show the notification ---------- */
