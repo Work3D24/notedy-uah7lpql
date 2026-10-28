@@ -295,13 +295,56 @@
   }
   function curTone() { return toneCfg.mode === "manual" ? toneCfg.v : autoTone(); }
   function toneUi() {
-    var r = $("toneRange"); if (!r) return; var t = curTone(); if (document.activeElement !== r) r.value = Math.round(t * 100);
+    sleepUi(); var r = $("toneRange"); if (!r) return; var t = curTone(); if (document.activeElement !== r) r.value = Math.round(t * 100);
     $("toneAuto").classList.toggle("on", toneCfg.mode !== "manual");
     $("toneTxt").textContent = (toneCfg.mode === "manual" ? "ปรับเอง" : "อัตโนมัติตามเวลา") + " · " + (t < 0.05 ? "Day สว่างสุด" : t > 0.95 ? "Night มืดสุด" : "มืด " + Math.round(t * 100) + "%");
   }
   function applyTone() { if (office) office.setTone(curTone()); toneUi(); }
   function setToneManual(v) { toneCfg = { mode: "manual", v: Math.min(1, Math.max(0, v)) }; try { localStorage.setItem("notedy.tone", JSON.stringify(toneCfg)); } catch (e) { /* not saved */ } applyTone(); }
   function setToneAuto() { toneCfg = { mode: "auto" }; try { localStorage.removeItem("notedy.tone"); } catch (e) { /* ignore */ } applyTone(); }
+
+  /* ---------- sleeping spirits: from 19:00 an idle spirit goes to bed; long-press (or the 😴 in its page) sends one to bed / wakes it. Each one separately. ---------- */
+  var sleepCfg = (function () { try { var v = JSON.parse(localStorage.getItem("notedy.sleep") || "null"); if (v && typeof v === "object") return { auto: v.auto !== false, ov: v.ov || {} }; } catch (e) { /* default */ } return { auto: true, ov: {} }; })();
+  var fxOpts = (function () { try { var v = JSON.parse(localStorage.getItem("notedy.fxopts") || "null"); if (v && typeof v === "object") return { glow: v.glow !== false, grade: v.grade !== false, party: v.party !== false }; } catch (e) { /* default */ } return { glow: true, grade: true, party: true }; })();
+  function saveSleep() { try { localStorage.setItem("notedy.sleep", JSON.stringify(sleepCfg)); } catch (e) { /* not saved */ } }
+  function saveFxOpts() { try { localStorage.setItem("notedy.fxopts", JSON.stringify(fxOpts)); } catch (e) { /* not saved */ } }
+  function bkkHour() { var p = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(new Date()).split(":"); return +p[0] + p[1] / 60; }
+  function isDark() { var h = bkkHour(); return h >= 19 || h < 6; }
+  function nextWake() { var now = Date.now(), th = new Date(now + 7 * 3600e3), d = Date.UTC(th.getUTCFullYear(), th.getUTCMonth(), th.getUTCDate(), 6, 0, 0) - 7 * 3600e3; if (d <= now) d += 864e5; return d; }
+  function busyNow(id) { if (id === "Minty") return (status.pending || 0) > 0; if (id === "Notedy") return !!(ofToday && ofToday.pending > 0); if (id === "Drivey") return !!status.error; return false; }
+  function asleep(id) {
+    var o = sleepCfg.ov[id]; if (o && o.until > Date.now()) return !!o.v;
+    return sleepCfg.auto && isDark() && !busyNow(id);
+  }
+  function applySleep() { if (!office) return; var m = {}; Office.ROSTER.forEach(function (r) { if (asleep(r.id)) m[r.id] = true; }); office.setSleep(m); sleepUi(); }
+  function setSleepOne(id, v) { sleepCfg.ov[id] = { v: v ? 1 : 0, until: isDark() ? nextWake() : Date.now() + 4 * 3600e3 }; saveSleep(); applySleep(); }
+  function sleepUi() {
+    var z = $("ofZ"); if (z && ofSpirit) { var s = asleep(ofSpirit); z.textContent = s ? "⏰" : "😴"; z.title = s ? "ปลุก" : "ให้นอน"; }
+    var a = $("sleepAuto"); if (a) a.checked = sleepCfg.auto; [["fxGlow", "glow"], ["fxGrade", "grade"], ["fxParty", "party"]].forEach(function (x) { var c = $(x[0]); if (c) c.checked = fxOpts[x[1]]; });
+  }
+  var sleepFor = null;
+  function openSleepMenu(def, asset, el) {
+    var m = $("ofSleepMenu"), o = $("office"); if (!m || !o) return; sleepFor = def.id; var r = el.getBoundingClientRect(), ob = o.getBoundingClientRect(), s = asleep(def.id);
+    m.innerHTML = '<button type="button" data-sl="toggle">' + (s ? "⏰ ปลุก" : "😴 ให้") + esc(def.th) + (s ? "" : "นอน") + '</button><button type="button" data-sl="open">เปิดหน้าของ' + esc(def.th) + "</button>";
+    m.hidden = false; var w = m.offsetWidth || 170; m.style.left = Math.max(8, Math.min(ob.width - w - 8, r.left - ob.left + r.width / 2 - w / 2)) + "px"; m.style.top = Math.max(70, r.top - ob.top + r.height * 0.25) + "px";
+    try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) { /* no haptics */ }
+  }
+  function celebrate() {                                         // every folder checked: confetti and hearts for a few seconds
+    var o = $("office"); if (!o || view !== "office" || o.hidden) return;
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { toast("ตรวจครบแล้ว 🎉"); return; }
+    var cv = document.createElement("canvas"), W = o.clientWidth, H = o.clientHeight, d = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = W * d; cv.height = H * d; cv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:50;pointer-events:none"; o.appendChild(cv);
+    var x = cv.getContext("2d"), cols = ["#ff6f91", "#ffc75f", "#4b64c4", "#2ec4b6", "#b78cf7", "#ff9671", "#8bd450"], ps = [], i;
+    for (i = 0; i < 110; i++) ps.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.6, vx: (Math.random() - 0.5) * 60, vy: 120 + Math.random() * 180, r: 4 + Math.random() * 5, a: Math.random() * 6.28, va: (Math.random() - 0.5) * 8, c: cols[i % cols.length], h: Math.random() < 0.22 });
+    var t0 = performance.now(), last = t0;
+    (function f(t) {
+      var dt = Math.min(0.05, (t - last) / 1000), el = (t - t0) / 1000; last = t; x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, W, H);
+      ps.forEach(function (p) { p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.va * dt; x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.globalAlpha = Math.max(0, Math.min(1, (4 - el) / 1.2)); if (p.h) { x.font = (p.r * 3) + "px sans-serif"; x.fillText("💖", -p.r, 0); } else { x.fillStyle = p.c; x.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); } x.restore(); });
+      if (el < 4) requestAnimationFrame(f); else cv.remove();
+    })(t0);
+    toast("ตรวจครบแล้ว 🎉 เก่งมาก!");
+  }
+
   function toggleTone(on) { var p = $("ofTone"); if (!p) return; p.hidden = on === undefined ? !p.hidden : !on; if (!p.hidden) toneUi(); }
   function authFail(e) {                                         // PIN changed / reset elsewhere or token revoked
     if (e.code && PIN_CODES[e.code]) { cfg.p = ""; saveCfg(cfg); gatePin(e.code === "pin_setup" ? "" : e.message); return true; }
@@ -322,11 +365,11 @@
       '<div class="demoTop"><div class="dtL"><div class="dtRow"><div class="pillBox"><span class="cat">🐱</span><strong>Notedy</strong></div><button class="noteBtn" data-note="1" type="button" aria-label="โน้ตประจำวัน" title="โน้ตประจำวัน">' + NOTE_ICON + '</button><button class="noteBtn wkBtn" data-wkopen="1" type="button" aria-label="หน้าสรุปงานเต็ม" title="หน้าสรุปงานเต็ม (จัดหมวด · PDF)">' + WORK_ICON + "</button></div>" +
       '<div class="pillBox pillBtn"><button type="button" id="ofPeriodBtn" class="pb" aria-label="เลือกรอบ"><span id="ofPeriod"></span><span class="car">▾</span></button><span class="sep"></span><button type="button" id="ofPend" class="pb" aria-label="ไปหน้าค้างตรวจ">📋 รอตรวจ <b id="ofPendN">–</b></button></div></div>' +
       '<div class="dtR"><button class="ico" id="toneBtn" type="button" aria-label="ปรับแสงในห้อง (Day / Night)" title="ปรับแสง Day / Night">🌗</button><button class="ico" id="menuBtn" type="button" aria-label="เมนู">⚙</button></div></div>' +
-      '<div id="ofTone" hidden><div class="tCard"><div class="tTop"><b>แสงในห้อง</b><button type="button" id="toneAuto" class="tAuto">อัตโนมัติ</button><button type="button" id="toneX" class="tX" aria-label="ปิด">✕</button></div><div class="tRow"><span aria-hidden="true">☀️</span><input id="toneRange" type="range" min="0" max="100" step="1" aria-label="ความมืด: Day ถึง Night"><span aria-hidden="true">🌙</span></div><div class="tLb"><span>Day</span><small id="toneTxt"></small><span>Night</span></div></div></div>' +
+      '<div id="ofTone" hidden><div class="tCard"><div class="tTop"><b>แสง · การนอน</b><button type="button" id="toneAuto" class="tAuto">อัตโนมัติ</button><button type="button" id="toneX" class="tX" aria-label="ปิด">✕</button></div><div class="tRow"><span aria-hidden="true">☀️</span><input id="toneRange" type="range" min="0" max="100" step="1" aria-label="ความมืด: Day ถึง Night"><span aria-hidden="true">🌙</span></div><div class="tLb"><span>Day</span><small id="toneTxt"></small><span>Night</span></div><div class="tSep"></div><div class="tSl"><button type="button" id="sleepAll">😴 ให้ทุกตัวนอน</button><button type="button" id="wakeAll">⏰ ปลุกทุกตัว</button></div><label class="tChk"><input type="checkbox" id="sleepAuto"> นอนเองหลัง 19:00 เมื่อว่างงาน</label><div class="tOpts"><label><input type="checkbox" id="fxGlow"> แสงโคม</label><label><input type="checkbox" id="fxGrade"> โทนสี</label><label><input type="checkbox" id="fxParty"> ฉลอง 🎉</label></div></div></div><div id="ofSleepMenu" hidden></div>' +
       '<button class="handle" id="ofHandle" type="button" aria-label="เมนูลัด"><i></i></button>' +
       '<div id="ofQuick" hidden><div class="qCard"><button type="button" data-q="pending">📥<span>ค้างตรวจ</span></button><button type="button" data-q="day">📒<span>โน้ตรายวัน</span></button><button type="button" data-q="work">📊<span>สรุปงาน</span></button><button type="button" data-q="menu">⚙<span>เมนู</span></button></div></div>' +
       '<div id="ofPeriodMenu" hidden><div class="mCard"><h3>เลือกรอบ (26 → 26)</h3><div id="ofPeriodList"></div><button type="button" id="ppClose" class="plain">ปิด</button></div></div>' +
-      '<div id="ofScrim"></div><div id="ofSheet" role="dialog" aria-modal="true" data-dark="0"><div class="grab"></div><div class="phead"><img id="ofImg" alt=""><div><h2 id="ofNm"></h2><small id="ofRl"></small></div><button class="x" id="ofX" type="button" aria-label="ปิด">✕</button></div>' +
+      '<div id="ofScrim"></div><div id="ofSheet" role="dialog" aria-modal="true" data-dark="0"><div class="grab"></div><div class="phead"><img id="ofImg" alt=""><div><h2 id="ofNm"></h2><small id="ofRl"></small></div><button class="x" id="ofZ" type="button" aria-label="ให้นอน / ปลุก" title="ให้นอน">😴</button><button class="x" id="ofX" type="button" aria-label="ปิด">✕</button></div>' +
       '<div class="strip" id="ofStrip"></div><div id="ofBody"></div>' +
       '<div id="ofChatBox" class="collapsed"><button class="chatBar" id="ofChatBar" type="button"><span id="ofChatBarT">💬 แชท</span><span class="chev" aria-hidden="true">▾</span></button><div id="ofChat"></div><div id="ofKey" hidden></div><form id="ofForm" autocomplete="off"><input id="ofIn" maxlength="500" enterkeyhint="send"><button id="ofSend" type="submit">ส่ง</button></form></div></div>' +
       '<div id="ofMenu" hidden><div class="mCard"><h3>เมนู</h3><button type="button" id="syncBtn">🔄 ซิงก์ Drive ตอนนี้</button><button type="button" id="mQr">📱 เปิดบนมือถือเครื่องอื่น (QR)</button><div id="mQrBox" hidden></div>' +
@@ -341,7 +384,7 @@
     }
     loadOfficeAssets().then(function () {
       if (view !== "office" || office) return;
-      office = new Office($("ofStage"), { base: "office/", onTap: openSheet }); office.load(ofAssets, ofLayout, curTone()); office.setBadges(ofBadges);
+      office = new Office($("ofStage"), { base: "office/", onTap: openSheet, onLongPress: openSleepMenu }); office.load(ofAssets, ofLayout, curTone()); office.setOpts(fxOpts); office.setBadges(ofBadges); applySleep();
     }).catch(function () { toast("โหลดภาพห้องไม่สำเร็จ ลองเปิดใหม่"); });
     var cs = lsGet("notedy.cache.data"); if (cs && cs.items && status.pending == null) {                     // last known numbers right away, fresh ones follow
       var pn0 = cs.items.filter(function (f) { return f.decision === "pending"; }).length; status = Object.assign({}, status, { pending: pn0 }); ofBadges = { Minty: pn0 };
@@ -402,10 +445,10 @@
   }
   function officeData() {
     return Promise.all([api("status"), api("daily", { date: todayStr() })]).then(function (r) {
-      status = r[0]; var gs = groupFiles(r[1].files || []);
+      var prevP = status.pending; status = r[0]; var gs = groupFiles(r[1].files || []);
       ofToday = { groups: gs.length, files: r[1].files_total || 0, pending: gs.filter(function (g) { return groupDecision(g) === "pending"; }).length };
       ofBadges = { Minty: status.pending || 0, Notedy: ofToday.pending }; if (Date.now() - catAt > 600000) refreshCats();
-      if (office) office.setBadges(ofBadges); headerOffice();
+      if (office) office.setBadges(ofBadges); headerOffice(); applySleep(); if (prevP > 0 && status.pending === 0 && fxOpts.party) celebrate();
     }).catch(function (e) { if (!authFail(e)) toast(e.message); });
   }
   function sayFor(def) {
@@ -880,7 +923,7 @@
     $("ofRl").textContent = def.role + (ai.has_key ? " · คุยกับ AI ได้ (Gemini ฟรี)" : " · ผู้ช่วยแบบกฎ ใช้ข้อมูลจริง");
     buildStrip(def.id); $("ofBody").innerHTML = '<div class="bubble">' + esc(sayFor(def)) + '</div><div class="muted" style="text-align:center">กำลังโหลดข้อมูล…</div>'; $("ofBody").scrollTop = 0;
     $("ofIn").placeholder = "พิมพ์คุยกับ" + def.th + "… เช่น “วันนี้ค้างตรวจอะไรบ้าง”"; setChatCollapsed(chatCollapsed, true); $("office").classList.add("open");
-    var me = def.id; chatRender();
+    var me = def.id; chatRender(); sleepUi();
     loadSpiritData(false, function (c) { if (ofSpirit === me) renderBody(def, c); }).then(function (d) { if (ofSpirit === me) renderBody(def, d); })
       .catch(function (e) { if (ofSpirit === me && !authFail(e) && $("ofBody")) $("ofBody").innerHTML = '<div class="bubble">' + esc(sayFor(def)) + '</div><div class="banner">' + esc(e.message) + "</div>"; });
     if (ai.has_key === null) aiLoad();
@@ -910,7 +953,7 @@
     var vv = window.visualViewport, kb = function () { var sh = $("ofSheet"); if (!sh) return; sh.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; sh.style.maxHeight = Math.max(280, Math.min(window.innerHeight * 0.9, vv.height - 10)) + "px"; };
     vv.addEventListener("resize", kb); vv.addEventListener("scroll", kb);
   }
-  setInterval(function () { if (office && view === "office" && toneCfg.mode !== "manual") applyTone(); }, 30000);
+  setInterval(function () { if (office && view === "office") { if (toneCfg.mode !== "manual") applyTone(); applySleep(); } }, 30000);
 
 
   /* ---------- the full work page: look by category, confirm / move categories, rename, make the PDF (the PC "full page", in one column for the phone) ---------- */
@@ -1050,6 +1093,12 @@
     if (cb) { var ck = cb.dataset.chat; if (ck === "act") chatAct(cb.dataset.eid, +cb.dataset.ai); else if (ck === "openkey") openKeyBox(); return; }
     if (t.closest("#fxClose") || t.id === "ofAsk") { fxUserClose(); return; }
     if (t.closest("#fxAgain")) { if (fx.item) replay([fx.item]); return; }
+    var sm = t.closest("#ofSleepMenu [data-sl]");
+    if (sm) { var sid = sleepFor, sdef = Office.BY[sid]; $("ofSleepMenu").hidden = true; if (sm.dataset.sl === "toggle") { setSleepOne(sid, !asleep(sid)); toast(asleep(sid) ? (sdef ? sdef.th : sid) + "หลับแล้ว 💤" : "ปลุกแล้ว"); } else { var ac = ofAssets && ofAssets.chars.filter(function (c) { return c.id === sid; })[0]; if (ac && sdef) openSheet(sdef, ac); } return; }
+    var smo = $("ofSleepMenu"); if (smo && !smo.hidden && !t.closest("#ofSleepMenu")) smo.hidden = true;
+    if (t.closest("#ofZ")) { if (ofSpirit) { setSleepOne(ofSpirit, !asleep(ofSpirit)); toast(asleep(ofSpirit) ? "หลับแล้ว 💤" : "ปลุกแล้ว"); } return; }
+    if (t.closest("#sleepAll")) { Office.ROSTER.forEach(function (r) { sleepCfg.ov[r.id] = { v: 1, until: isDark() ? nextWake() : Date.now() + 4 * 3600e3 }; }); saveSleep(); applySleep(); toast("ให้ทุกตัวนอนแล้ว 💤"); return; }
+    if (t.closest("#wakeAll")) { Office.ROSTER.forEach(function (r) { sleepCfg.ov[r.id] = { v: 0, until: isDark() ? nextWake() : Date.now() + 4 * 3600e3 }; }); saveSleep(); applySleep(); toast("ปลุกทุกตัวแล้ว"); return; }
     if (t.closest("#toneBtn")) { toggleTone(); return; }
     if (t.closest("#toneX")) { toggleTone(false); return; }
     if (t.closest("#toneAuto")) { setToneAuto(); return; }
@@ -1082,7 +1131,9 @@
   document.addEventListener("input", function (e) { var id = e.target && e.target.id; if (id === "ofSearch") searchRefresh(); else if (id === "wkQ") { wk.q = e.target.value; wkRefreshDyn(); } else if (id === "toneRange") setToneManual(e.target.value / 100); });
   document.addEventListener("change", function (e) {
     var t = e.target; if (!t) return;
-    if (t.id === "ofSF" || t.id === "ofST" || t.id === "ofSS") searchRefresh();
+    if (t.id === "sleepAuto") { sleepCfg.auto = t.checked; if (t.checked) sleepCfg.ov = {}; saveSleep(); applySleep(); }
+    else if (t.id === "fxGlow" || t.id === "fxGrade" || t.id === "fxParty") { fxOpts[t.id === "fxGlow" ? "glow" : t.id === "fxGrade" ? "grade" : "party"] = t.checked; saveFxOpts(); if (office) office.setOpts(fxOpts); }
+    else if (t.id === "ofSF" || t.id === "ofST" || t.id === "ofSS") searchRefresh();
     else if (t.id === "wkPer") { var lst = periodList(), k = +t.value; ofPer = k === 0 ? null : lst[k]; headerOffice(); wk.at = 0; var key = periodSel().from; wk.data = lsGet("notedy.cache.work." + key); wk.key = wk.data ? key : ""; wkRender(); wkLoad().then(function () { if (wk.open) wkRender(); }); }
     else if (t.dataset && t.dataset.wkcat !== undefined) {
       var cat = t.value; if (cat === "__new") { cat = (prompt("ชื่อหมวดใหม่") || "").trim(); if (!cat) { wkRefreshDyn(); return; } }

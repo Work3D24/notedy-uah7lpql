@@ -55,13 +55,16 @@
     return out;
   }
 
+  /* lamps + the moon, as fractions of the BG picture (x, y) and a radius in px: soft glows that fade in with the dark */
+  var GLOWS = [[.373, .150, 46], [.398, .210, 34], [.896, .2325, 42], [.141, .2275, 30], [.398, .314, 26], [.476, .339, 26], [.287, .431, 30], [.333, .4325, 28], [.489, .446, 36], [.081, .426, 30], [.606, .4525, 46], [.79, .2325, 86, 1]];
   function Office(root, o) {
-    var me = this; me.o = o || {}; me.root = root; me.night = false; me.tone = 0; me.A = { chars: [], decos: [], bg: null }; me.L = null; me.it = {}; me.badges = {}; me.sel = null;
+    var me = this; me.o = o || {}; me.root = root; me.night = false; me.tone = 0; me.sleepMap = {}; me.opts = { glow: true, grade: true }; me.A = { chars: [], decos: [], bg: null }; me.L = null; me.it = {}; me.badges = {}; me.sel = null;
     root.classList.add('of'); if (me.o.editor) root.classList.add('of-ed');
     me.fill = el('img', 'of-fill'); me.fill.alt = ''; me.fill.draggable = false; root.appendChild(me.fill);       /* blurred copy of the BG behind a letter-boxed scene */
     me.scroll = el('div', 'of-scroll'); me.wrap = el('div', 'of-wrap'); me.bg = el('img', 'of-bg'); me.bg.draggable = false; me.bg.alt = ''; me.bgN = el('img', 'of-bg of-n'); me.bgN.draggable = false; me.bgN.alt = '';
     me.cBack = el('div', 'of-layer'); me.cChars = el('div', 'of-layer'); me.cFront = el('div', 'of-layer'); me.pin = el('div', 'of-pin');
-    me.wrap.appendChild(me.bg); me.wrap.appendChild(me.bgN); me.wrap.appendChild(me.cBack); me.wrap.appendChild(me.cChars); me.wrap.appendChild(me.cFront);
+    me.glow = el('div', 'of-glows'); me.grade = el('div', 'of-grade');
+    me.wrap.appendChild(me.bg); me.wrap.appendChild(me.bgN); me.wrap.appendChild(me.glow); me.wrap.appendChild(me.cBack); me.wrap.appendChild(me.cChars); me.wrap.appendChild(me.cFront); me.wrap.appendChild(me.grade);
     me.scroll.appendChild(me.wrap); root.appendChild(me.scroll); root.appendChild(me.pin);
     if (me.o.editor) me._bgDrag();
   }
@@ -80,15 +83,27 @@
   Office.prototype._add = function (key, kind, asset, P, cont, i) {
     var me = this, def = BY[asset.id] || { th: asset.id };
     var e = el(kind === 'char' && !me.o.editor ? 'button' : 'div', 'of-it of-' + kind); if (e.tagName === 'BUTTON') e.type = 'button';
-    var im = el('img'); im.alt = ''; im.draggable = false; e.appendChild(im); var imN = el('img', 'of-n'); imN.alt = ''; imN.draggable = false; e.appendChild(imN);
+    var im = el('img', 'of-st'); im.alt = ''; im.draggable = false; e.appendChild(im); var imN = el('img', 'of-n of-st'); imN.alt = ''; imN.draggable = false; e.appendChild(imN);
     if (kind === 'char') {
       e.style.setProperty('--d', '-' + (i * 0.37).toFixed(2) + 's');
       var bd = el('span', 'bd'); bd.style.display = 'none'; e.appendChild(bd);
+      var zz = el('span', 'zzz'); zz.innerHTML = '<i>z</i><i>z</i><i>Z</i>'; e.appendChild(zz);       /* floating z z Z while asleep */
+      if (asset.sleep) {                                                                               /* optional sleeping picture (bed): fades in over the desk one */
+        var S = asset.sleep, mk = function (cls) { var g = el('img', cls); g.alt = ''; g.draggable = false; g.style.left = (S.x / asset.w * 100) + '%'; g.style.top = (S.y / asset.h * 100) + '%'; g.style.width = (S.w / asset.w * 100) + '%'; e.appendChild(g); return g; };
+        var imS = mk('of-s'), imSN = mk('of-s of-n'); e.classList.add('hasZ');
+      }
       var nm = el('span', 'nm'); nm.textContent = asset.id; e.appendChild(nm);          /* English name, small */
       if (asset.theme) { nm.style.setProperty('--tb', asset.theme.bg); nm.style.setProperty('--tf', asset.theme.fg); nm.style.setProperty('--ts', /^#f{3,}/i.test(asset.theme.fg) ? '0 1px 2px rgba(0,0,0,.4)' : '0 1px 0 rgba(255,255,255,.55)'); }   /* liquid-glass chip tinted with the spirit's colour */
-      if (!me.o.editor) e.addEventListener('click', function () { me.o.onTap && me.o.onTap(def, asset); });
+      if (!me.o.editor) {
+        var lp = null, held = false, sp = null;                                                        /* long press = the sleep menu, a tap still opens the spirit */
+        e.addEventListener('pointerdown', function (ev) { held = false; sp = [ev.clientX, ev.clientY]; clearTimeout(lp); lp = setTimeout(function () { held = true; me.o.onLongPress && me.o.onLongPress(def, asset, e); }, 520); });
+        e.addEventListener('pointermove', function (ev) { if (sp && Math.hypot(ev.clientX - sp[0], ev.clientY - sp[1]) > 10) clearTimeout(lp); });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) { e.addEventListener(n, function () { clearTimeout(lp); }); });
+        e.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+        e.addEventListener('click', function () { if (held) { held = false; return; } me.o.onTap && me.o.onTap(def, asset); });
+      }
     }
-    var it = { key: key, kind: kind, e: e, im: im, imN: imN, asset: asset, P: P, def: def, bd: bd || null };
+    var it = { key: key, kind: kind, e: e, im: im, imN: imN, imS: typeof imS === 'undefined' ? null : imS, imSN: typeof imSN === 'undefined' ? null : imSN, asset: asset, P: P, def: def, bd: bd || null };
     me.it[key] = it; cont.appendChild(e);
     if (me.o.editor) me._drag(it);
   };
@@ -100,7 +115,7 @@
   Office.prototype.place = function (it) {
     var P = it.P, e = it.e, pin = it.kind === 'deco' && P.layer === 'pin', c = this.containerFor(it);
     if (e.parentNode !== c) c.appendChild(e);
-    e.style.left = P.x + '%'; e.style.width = P.w + 'px';
+    e.style.left = P.x + '%'; e.style.width = P.w + 'px'; e.style.setProperty('--w', P.w + 'px');
     if (pin) { e.style.top = 'auto'; e.style.bottom = P.y + 'px'; e.style.transform = 'translateX(-50%)'; e.style.zIndex = String(1000 - Math.round(P.y)); }
     else { e.style.bottom = 'auto'; e.style.top = P.y + 'px'; e.style.transform = 'translate(-50%,-100%)'; e.style.zIndex = String(Math.round(P.y)); }
     e.style.setProperty('--fx', P.flip ? -1 : 1);
@@ -111,10 +126,12 @@
     var me = this, L = me.L, A = me.A, n = me.night, b = A.bg;
     if (!me._rz) { me._rz = 1; window.addEventListener('resize', function () { if (me.L && !me._dead) me._fit(); }); }
     if (b) { me.bg.src = me.u(b.day); me.bgN.src = me.u(b.night || b.day); me.fill.src = me.u(n ? (b.night || b.day) : b.day); [me.bg, me.bgN].forEach(function (g) { g.style.width = L.bg.w + 'px'; g.style.left = L.bg.x + '%'; g.style.top = L.bg.y + 'px'; }); me.bgN.style.display = b.night && b.night !== b.day ? '' : 'none'; }
-    me._fit(); me._fxApply();
+    me._fit(); me._fxApply(); me._glowApply();
     me.root.classList.toggle('bgsel', me.sel === 'bg'); me.root.classList.toggle('fxsel', me.sel === 'fx');
     Object.keys(me.it).forEach(function (k) {
-      var it = me.it[k]; it.im.src = me.u(it.asset.day); it.imN.src = me.u(it.asset.night || it.asset.day); it.imN.style.display = it.asset.night && it.asset.night !== it.asset.day ? '' : 'none'; me.place(it);
+      var it = me.it[k]; it.im.src = me.u(it.asset.day); it.imN.src = me.u(it.asset.night || it.asset.day); it.imN.style.display = it.asset.night && it.asset.night !== it.asset.day ? '' : 'none'; if (it.imS) { var S = it.asset.sleep, same = !S.night || S.night === S.day; it.imS.src = me.u(S.day); it.imSN.src = me.u(S.night || S.day); it.imSN.style.display = same ? 'none' : ''; }
+      it.e.classList.toggle('zz', !!me.sleepMap[it.asset.id]);
+      me.place(it);
       if (it.bd) { var v = me.badges[it.asset.id]; it.bd.style.display = v ? '' : 'none'; it.bd.textContent = v || ''; }
     });
   };
@@ -140,10 +157,31 @@
     return Math.max(fit, Math.min(cover, allowed));
   };
   Office.prototype.setNight = function (n) { this.setTone(n ? 1 : 0); };
+  /* who is asleep: { Minty: true, ... } (only characters; each one separately) */
+  Office.prototype.setSleep = function (m) {
+    this.sleepMap = m || {}; var me = this;
+    Object.keys(me.it).forEach(function (k) { var it = me.it[k]; if (it.kind === 'char') it.e.classList.toggle('zz', !!me.sleepMap[it.asset.id]); });
+  };
+  Office.prototype.setOpts = function (o) { this.opts = Object.assign(this.opts, o || {}); this._glowApply(); this._gradeApply(); };
+  /* lamp / moon glows sit on the BG picture and fade in with the dark (--gl), a little flicker each */
+  Office.prototype._glowApply = function () {
+    var me = this, b = me.A && me.A.bg, L = me.L; if (!b || !L) return;
+    if (!me.glow.firstChild) GLOWS.forEach(function (g, i) { var d = el('i', g[3] ? 'moon' : ''); d.style.animationDelay = '-' + (i * 0.7).toFixed(1) + 's'; me.glow.appendChild(d); });
+    var W = me.wrap.clientWidth || 390, w = L.bg.w, h = w * b.h / b.w, x0 = W * L.bg.x / 100 - w / 2;
+    [].forEach.call(me.glow.children, function (d, i) { var g = GLOWS[i], r = g[2]; d.style.width = d.style.height = (r * 2) + 'px'; d.style.left = (x0 + g[0] * w - r) + 'px'; d.style.top = (L.bg.y + g[1] * h - r) + 'px'; });
+    me._gradeApply();
+  };
+  Office.prototype._gradeApply = function () {
+    var me = this, t = me.tone || 0, on = me.opts.glow !== false;
+    me.glow.style.display = on ? '' : 'none'; me.glow.style.setProperty('--gl', Math.max(0, Math.min(1, (t - .15) / .6)).toFixed(3));
+    var g = me.opts.grade !== false, warm = Math.pow(Math.sin(Math.PI * t), 1.3) * .34, cool = t * t * .26;
+    me.grade.style.display = g && (warm > .01 || cool > .01) ? '' : 'none';
+    me.grade.style.background = 'linear-gradient(rgba(255,150,70,' + warm.toFixed(3) + '),rgba(255,150,70,' + warm.toFixed(3) + ')),linear-gradient(rgba(40,70,210,' + cool.toFixed(3) + '),rgba(40,70,210,' + cool.toFixed(3) + '))';
+  };
   /* 0 = day (brightest) ... 1 = night (darkest): the night images fade in over the day ones (one CSS variable, no reload of images) */
   Office.prototype.setTone = function (t) {
     t = Math.min(1, Math.max(0, +t || 0)); var me = this, was = me.night; me.tone = t; me.night = t >= .5;
-    me.root.style.setProperty('--tn', t.toFixed(3));
+    me.root.style.setProperty('--tn', t.toFixed(3)); me._gradeApply();
     if (me.night !== was && me.A.bg) me.fill.src = me.u(me.night ? (me.A.bg.night || me.A.bg.day) : me.A.bg.day);
   };
   Office.prototype.setBadges = function (b) { this.badges = b || {}; this.refresh(); };

@@ -45,3 +45,26 @@
 .of-bg.of-n{opacity:var(--tn,0)}
 .of-wrap{isolation:isolate}
 .of-fx{will-change:opacity}
+
+/* lamp + moon glows (screen-blended on the BG) and the dusk/night colour grade */
+.of-glows{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:var(--gl,0)}
+.of-glows i{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,200,120,.85) 0%,rgba(255,170,90,.38) 38%,rgba(255,150,70,0) 70%);animation:ofglow 3.6s ease-in-out infinite}
+.of-glows i.moon{background:radial-gradient(circle,rgba(200,220,255,.55) 0%,rgba(150,180,255,.22) 40%,rgba(120,150,255,0) 70%);animation-duration:7s}
+@keyframes ofglow{0%,100%{transform:scale(.92);filter:brightness(.9)}50%{transform:scale(1.08);filter:brightness(1.15)}}
+.of-grade{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light}
+/* sleeping: a bed picture fades in over the desk one (when the art exists), otherwise the spirit just dozes */
+.of-it img.of-s{position:absolute;opacity:0}
+.of-it.hasZ img{transition:opacity .45s ease}
+.of-it.zz img.of-s:not(.of-n){opacity:1}
+.of-it.zz img.of-s.of-n{opacity:var(--tn,0)}
+.of-it.zz.hasZ img.of-st{opacity:0 !important}
+.of-char.zz:not(.hasZ) img{filter:brightness(.8) saturate(.85) drop-shadow(0 6px 5px #3a1c0a55)}
+.of-char.zz img{animation-duration:calc(var(--bs,4.2s) * 1.8)}
+.of-it .zzz{display:none;position:absolute;right:6%;top:3%;width:30%;height:30%;pointer-events:none;font-weight:800;color:#fff;text-shadow:0 1px 5px #2b2a6b,0 0 8px #8aa4ff;font-size:calc(var(--w,110px) * .13);font-family:inherit}
+.of-it.zz .zzz{display:block}
+.zzz i{position:absolute;left:0;bottom:0;font-style:normal;opacity:0;animation:ofz 3.6s ease-in-out infinite}
+.zzz i:nth-child(2){animation-delay:1.2s;left:10%}.zzz i:nth-child(3){animation-delay:2.4s;left:22%}
+@keyframes ofz{0%{transform:translate(0,0) scale(.5);opacity:0}20%{opacity:1}100%{transform:translate(18px,-46px) scale(1.25);opacity:0}}
+.of-it.zz .nm::after{content:' \1F634'}
+.of-char{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+@media (prefers-reduced-motion:reduce){.of-glows i,.zzz i{animation:none}}
