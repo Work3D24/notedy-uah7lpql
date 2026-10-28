@@ -1,5 +1,5 @@
 {
- "built": "2026-10-28 04:05:47",
+ "built": "2026-10-29 05:20:05",
  "chars": [
   {
    "id": "Notedy",
@@ -12,6 +12,14 @@
    "theme": {
     "bg": "#3960d0",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Notedy_sleep.webp",
+    "night": "img/chars/Notedy_sleep_night.webp",
+    "x": -7.0,
+    "y": -74,
+    "w": 654,
+    "h": 739
    }
   },
   {
@@ -25,6 +33,14 @@
    "theme": {
     "bg": "#395fd0",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Newnew_sleep.webp",
+    "night": "img/chars/Newnew_sleep_night.webp",
+    "x": -1.5,
+    "y": -21,
+    "w": 643,
+    "h": 723
    }
   },
   {
@@ -38,6 +54,14 @@
    "theme": {
     "bg": "#171f63",
     "fg": "#ffe9a8"
+   },
+   "sleep": {
+    "day": "img/chars/Backy_sleep.webp",
+    "night": "img/chars/Backy_sleep_night.webp",
+    "x": -7.5,
+    "y": -89,
+    "w": 655,
+    "h": 705
    }
   },
   {
@@ -51,6 +75,14 @@
    "theme": {
     "bg": "#669523",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Minty_sleep.webp",
+    "night": "img/chars/Minty_sleep_night.webp",
+    "x": -1.0,
+    "y": 27,
+    "w": 642,
+    "h": 669
    }
   },
   {
@@ -64,6 +96,14 @@
    "theme": {
     "bg": "#3976d0",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Drivey_sleep.webp",
+    "night": "img/chars/Drivey_sleep.webp",
+    "x": -13.0,
+    "y": -81,
+    "w": 666,
+    "h": 728
    }
   },
   {
@@ -77,6 +117,14 @@
    "theme": {
     "bg": "#d03973",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Clouddy_sleep.webp",
+    "night": "img/chars/Clouddy_sleep_night.webp",
+    "x": -10.5,
+    "y": -48,
+    "w": 661,
+    "h": 678
    }
   },
   {
@@ -90,6 +138,14 @@
    "theme": {
     "bg": "#3962d0",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Linky_sleep.webp",
+    "night": "img/chars/Linky_sleep.webp",
+    "x": -5.0,
+    "y": -146,
+    "w": 650,
+    "h": 733
    }
   },
   {
@@ -103,6 +159,14 @@
    "theme": {
     "bg": "#dabd62",
     "fg": "#4a3410"
+   },
+   "sleep": {
+    "day": "img/chars/Sunny_sleep.webp",
+    "night": "img/chars/Sunny_sleep_night.webp",
+    "x": -2.0,
+    "y": -37,
+    "w": 644,
+    "h": 706
    }
   },
   {
@@ -116,6 +180,14 @@
    "theme": {
     "bg": "#d07839",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Searchy_sleep.webp",
+    "night": "img/chars/Searchy_sleep_night.webp",
+    "x": -4.0,
+    "y": -30,
+    "w": 648,
+    "h": 723
    }
   },
   {
@@ -129,6 +201,14 @@
    "theme": {
     "bg": "#d03961",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Drawy_sleep.webp",
+    "night": "img/chars/Drawy_sleep.webp",
+    "x": -5.5,
+    "y": -57,
+    "w": 651,
+    "h": 675
    }
   },
   {
@@ -142,6 +222,14 @@
    "theme": {
     "bg": "#3948d0",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Planly_sleep.webp",
+    "night": "img/chars/Planly_sleep_night.webp",
+    "x": -0.5,
+    "y": 113,
+    "w": 641,
+    "h": 524
    }
   },
   {
@@ -155,6 +243,14 @@
    "theme": {
     "bg": "#3960d0",
     "fg": "#ffffff"
+   },
+   "sleep": {
+    "day": "img/chars/Buddy_sleep.webp",
+    "night": "img/chars/Buddy_sleep_night.webp",
+    "x": -1.5,
+    "y": -125,
+    "w": 643,
+    "h": 642
    }
   }
  ],
