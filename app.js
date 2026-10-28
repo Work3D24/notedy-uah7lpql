@@ -608,7 +608,7 @@
     return { from: sh(pr.from), to: sh(pr.to) };
   }
   function periodList() { var cur = periodRange(), out = []; for (var k = 0; k < 12; k++) out.push(periodShift(cur, k)); return out; }
-  var ofPer = null, calM = null, calSel = null, mintyArm = null, mintyLast = null, bfMsg = "", pdfMsg = "", csvMsg = "";
+  var ofPer = null, calM = null, calSel = null, mintyArm = null, mintyLast = null, bfMsg = "", pdfMsg = "", csvMsg = "", pdPrev = null, pdWho = null;
   function periodSel() { return ofPer || periodRange(); }
   function periodLabel(pr) { return shortDate(pr.from) + " – " + shortDate(pr.to) + " " + pr.to.slice(0, 4); }
   function inPeriod(items, pr) { return items.filter(function (f) { var d = f.modifiedTime ? bkkDay(f.modifiedTime) : ""; return d >= pr.from && d <= pr.to; }); }
@@ -697,7 +697,20 @@
     var scale = def.id === "Drawy" ? card("ขนาดตัวอักษรเอกสาร", '<div class="stat"><b>' + sc + '%</b></div><div class="row">' + actBtn("scale", "A−", ' data-d="-0.05"', "ghost") + actBtn("scale", "A+", ' data-d="0.05"', "ghost") + actBtn("scale", "100%", ' data-reset="1"', "ghost") + '</div><div class="muted">มีผลกับ PDF ที่สร้างจากมือถือ (80–120%)</div>') : "";
     return scale + card("📄 สร้าง PDF สรุปงาน", '<div class="muted">รอบที่เลือก: ' + esc(periodLabel(pr)) + " · ตอนนี้ยืนยันเป็นงานแล้ว <b>" + gs.length + "</b> ชิ้นงาน (" + work.length + ' ไฟล์) · เปลี่ยนรอบที่พิลล์มุมบนซ้าย หรือเลือกช่วงเอง:</div>' +
       '<div class="row"><input type="date" id="pdFrom" value="' + pr.from + '"> – <input type="date" id="pdTo" value="' + pr.to + '"></div><div class="row">' + actBtn("pdf", "📄 สร้าง PDF") + "</div>" +
-      '<div id="pdfSt" class="muted">' + esc(pdfMsg) + '</div><div class="muted">เสร็จแล้วจะเปิดหน้าให้เลือกบันทึกลงโทรศัพท์ (ไฟล์) หรือแชร์ต่อ ในรายงานนับเฉพาะแฟ้มที่ตัดสินเป็น “เป็นงาน”</div>');
+      '<div id="pdfSt" class="muted">' + esc(pdfMsg) + '</div><div class="muted">เสร็จแล้วจะเปิดหน้าให้เลือกบันทึกลงโทรศัพท์ (ไฟล์) หรือแชร์ต่อ ในรายงานนับเฉพาะแฟ้มที่ตัดสินเป็น “เป็นงาน”</div>') +
+      card("🗂️ จัดหมวดชิ้นงานใน PDF", '<div class="muted">หน้าตา PDF เหมือนแบบที่ทำบนคอม: หมวด | ชิ้นงาน (จำนวนไฟล์) | เปิดไฟล์ — เลือกหมวดของแต่ละชิ้นงานที่นี่ ระบบจำไว้ใช้รอบถัดไป</div>' +
+        '<div class="row"><input type="text" id="pdWho" placeholder="ชื่อใต้หัวเรื่อง (Graphic Designer)" value="' + esc(pdWho == null ? "" : pdWho) + '"> ' + actBtn("pdwho", "บันทึกชื่อ", "", "ghost") + "</div>" +
+        '<div class="row">' + actBtn("pdcats", "🗂️ โหลดชิ้นงานของรอบนี้", "", "ghost") + '</div><div id="pdCats">' + pdCatsHtml() + "</div>");
+  }
+  function pdCatsHtml() {
+    if (!pdPrev) return "";
+    if (!pdPrev.groups.length) return '<div class="muted">ยังไม่มีงานที่ยืนยันเป็น “เป็นงาน” ในช่วงนี้</div>';
+    var cats = pdPrev.cats.slice(), opts = function (cur) { var all = cats.slice(); if (cur && cur !== "ไม่ระบุหมวด" && all.indexOf(cur) < 0) all.push(cur); return '<option value="">ไม่ระบุหมวด</option>' + all.map(function (c) { return '<option value="' + esc(c) + '"' + (c === cur ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + '<option value="__new">+ หมวดใหม่…</option>'; };
+    return pdPrev.groups.map(function (g) {
+      return '<div class="muted" style="margin-top:8px"><b>' + esc(g.cat) + "</b></div>" + g.rows.map(function (p) {
+        return '<div class="row" style="align-items:center"><div style="flex:1;min-width:0;font-size:13px">' + esc(p.name) + ' <span class="muted">' + p.files + ' ไฟล์</span></div><select data-pdassign="' + esc(p.pid) + '">' + opts(g.cat) + "</select></div>";
+      }).join("");
+    }).join("");
   }
   function bodyFor(def, d) {
     ofGroups = {};
@@ -802,6 +815,12 @@
       var rows = [["ชื่อไฟล์", "แฟ้ม", "แก้ไขล่าสุด", "สถานะ", "ลิงก์"]].concat(ofData.items.map(function (f) { return [f.name, f.folder_name || "", f.modifiedTime || "", f.decision || "pending", f.link || ""]; }));
       var csv = "﻿" + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(","); }).join("\r\n");
       saveBlob(new Blob([csv], { type: "text/csv" }), "notedy-queue-" + todayStr() + ".csv", "text/csv").then(function () { csvMsg = "ส่งออกแล้ว " + ofData.items.length + " รายการ"; var s = $("csvSt"); if (s) s.textContent = csvMsg; });
+    } else if (a === "pdwho") {
+      var nm = ($("pdWho").value || "").trim(); pdWho = nm; api("pdfcfg_set", { kind: "designer", key: "designer", val: nm }).then(function () { toast("บันทึกชื่อแล้ว"); }).catch(function (e) { if (!authFail(e)) toast(e.message); });
+    } else if (a === "pdcats") {
+      var rg2 = pdfRange(); b.disabled = true; $("pdCats").innerHTML = '<div class="muted">กำลังโหลด…</div>';
+      api("pdf_preview", { from: rg2.from, to: rg2.to }, 60000).then(function (r) { pdPrev = r; if (pdWho == null) pdWho = r.designer || ""; if ($("pdWho") && !$("pdWho").value) $("pdWho").value = pdWho; $("pdCats").innerHTML = pdCatsHtml(); })
+        .catch(function (e) { if (!authFail(e)) $("pdCats").innerHTML = '<div class="muted">⚠️ ' + esc(/unknown action/.test(e.message) ? "สคริปต์ยังไม่อัปเดต (ต้องอัปเวอร์ชันใหม่ก่อน)" : e.message) + "</div>"; }).then(function () { b.disabled = false; });
     } else if (a === "pdf") {
       var rg = pdfRange(); if (rg.from > rg.to) { toast("เลือกวันที่เริ่มและสิ้นสุดให้ถูกต้อง"); return; }
       b.disabled = true; var st = $("pdfSt"); if (st) st.textContent = "กำลังสร้าง PDF… (ครั้งแรกอาจใช้เวลา 10–30 วินาที)";
@@ -931,6 +950,14 @@
   document.addEventListener("change", function (e) {
     var t = e.target; if (!t) return;
     if (t.id === "ofSF" || t.id === "ofST" || t.id === "ofSS") searchRefresh();
+    else if (t.dataset && t.dataset.pdassign !== undefined) {
+      var pid = t.dataset.pdassign, val = t.value;
+      if (val === "__new") { val = (prompt("ชื่อหมวดใหม่") || "").trim(); if (!val) { t.value = ""; return; } }
+      (val && pdPrev.cats.indexOf(val) < 0 ? api("pdfcfg_set", { kind: "cat", key: val, val: "1" }) : Promise.resolve())
+        .then(function () { return api("pdfcfg_set", { kind: "assign", key: pid, val: val }); })
+        .then(function () { var rg3 = pdfRange(); return api("pdf_preview", { from: rg3.from, to: rg3.to }, 60000); })
+        .then(function (r) { pdPrev = r; if ($("pdCats")) $("pdCats").innerHTML = pdCatsHtml(); toast("จัดหมวดแล้ว"); }).catch(function (e) { if (!authFail(e)) toast(e.message); });
+    }
     else if (t.dataset && t.dataset.ack !== undefined) { var a = acksGet(); if (t.checked) a[t.dataset.ack] = t.dataset.sig; else delete a[t.dataset.ack]; lsSet("notedy.acks", a); if (ofDef && ofData) renderBody(ofDef, ofData); }
   });
   document.addEventListener("submit", function (e) { if (e.target && e.target.id === "ofForm") { e.preventDefault(); var iv = $("ofIn").value; $("ofIn").value = ""; chatSend(iv); } });
